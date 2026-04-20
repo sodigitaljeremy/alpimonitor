@@ -1,0 +1,109 @@
+# ADR-002 — Méthodologie ABEM pour les classes CSS
+
+**Date** : 2026-04-18
+**Statut** : Acceptée
+
+## Contexte
+
+Le poste CREALP mentionne explicitement "Atomic Design" comme méthodologie. Il faut une convention de nommage CSS cohérente avec :
+- Atomic Design (atoms, molecules, organisms, templates, pages)
+- Tailwind CSS (classes utilitaires)
+- Composants Vue single-file
+
+Plusieurs conventions candidates : BEM classique, ABEM (Atomic BEM), SMACSS, CUBE CSS, full-utility (Tailwind seul).
+
+## Décision
+
+On applique **ABEM** (Atomic BEM), une variante de BEM qui préfixe les blocs par un marqueur atomic design, couplée à Tailwind pour les utilitaires.
+
+### Convention précise
+
+Structure de classe : `[atomic-prefix]-block__element--modifier`
+
+Préfixes atomic design :
+- `a-` : atom (Button, Badge, Icon)
+- `m-` : molecule (StationCard, ThresholdBar)
+- `o-` : organism (StationList, Header)
+- `t-` : template (MainLayout)
+- `p-` : page (HomePage, StationDetailPage)
+
+Exemples :
+
+```html
+<button class="a-button a-button--primary a-button--lg">
+  <span class="a-button__icon">...</span>
+  <span class="a-button__label">Valider</span>
+</button>
+
+<article class="m-station-card m-station-card--alert">
+  <header class="m-station-card__header">
+    <h3 class="m-station-card__title">Borgne - Bramois</h3>
+    <span class="m-station-card__badge">Alerte</span>
+  </header>
+  <div class="m-station-card__body">...</div>
+</article>
+```
+
+### Règles d'usage combinées Tailwind
+
+- Les classes ABEM décrivent la **structure sémantique** et portent les variations principales
+- Les classes Tailwind dans `@apply` au sein des styles scopés des composants (préféré) OU en inline sur les éléments purement utilitaires
+- Pas de mix inline Tailwind + classe ABEM sémantique sur le même élément en production, **sauf** pour les spacings contextuels (ex: `class="a-button a-button--primary mt-4"` acceptable pour `mt-4`)
+
+### Fichier CSS par composant
+
+Chaque composant `.vue` a une balise `<style scoped>` qui contient :
+1. Variables CSS du composant si besoin
+2. Classes ABEM avec `@apply` Tailwind
+
+Exemple :
+
+```vue
+<template>
+  <button :class="['a-button', `a-button--${variant}`, `a-button--${size}`]">
+    <slot />
+  </button>
+</template>
+
+<style scoped>
+.a-button {
+  @apply inline-flex items-center justify-center font-medium rounded-md transition-colors;
+}
+.a-button--primary {
+  @apply bg-sky-600 text-white hover:bg-sky-700;
+}
+.a-button--secondary {
+  @apply bg-slate-200 text-slate-900 hover:bg-slate-300;
+}
+.a-button--md { @apply px-4 py-2 text-sm; }
+.a-button--lg { @apply px-6 py-3 text-base; }
+</style>
+```
+
+## Conséquences
+
+### Positives
+
+- **Lecture du DOM très lisible** : on sait immédiatement à quel niveau atomic appartient un élément
+- **Réutilisation** : les classes ABEM peuvent être partagées via un fichier global si un composant est réutilisé entre apps (pas notre cas v1, mais prêt)
+- **Démonstration explicite** d'Atomic Design dans le code (critère recruteur)
+- **Compatibilité Tailwind** : on garde la productivité de Tailwind sans sacrifier la sémantique
+
+### Négatives
+
+- **Overhead vs Tailwind seul** : un peu plus verbeux qu'un `<button class="bg-sky-600 px-4 py-2...">`
+- **Discipline requise** : il faut respecter la convention systématiquement, sinon incohérence
+
+## Alternatives écartées
+
+### Tailwind utility-only
+
+Écartée. Plus productif en pur speed, mais démontre moins explicitement la maîtrise d'Atomic Design. L'annonce cite "Atomic Design" explicitement : on doit le rendre visible dans le code.
+
+### BEM classique sans préfixe atomic
+
+Écartée. BEM seul ne distingue pas les niveaux atomic. ABEM ajoute cette information pour un coût de 2 caractères.
+
+### CUBE CSS
+
+Écartée. Méthodologie intéressante mais peu répandue, moins lisible par un recruteur qui n'aurait pas le temps d'apprendre une nouvelle convention pendant la revue.

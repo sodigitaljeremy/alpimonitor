@@ -1,0 +1,109 @@
+# ADR-006 — D3 en vanilla plutôt que via un wrapper Vue
+
+**Date** : 2026-04-18
+**Statut** : Acceptée
+
+## Contexte
+
+L'annonce CREALP cite **D3.js** comme compétence appréciée. AlpiMonitor utilise D3 pour ses graphiques de séries temporelles (débit, hauteur, température). Plusieurs approches dans un projet Vue :
+
+1. D3 vanilla manipulant directement le DOM via un `ref`
+2. D3 utilisé uniquement pour les calculs (scales, axes), rendu SVG via templates Vue
+3. Wrapper type `vue-d3` ou bibliothèque chart (Chart.js, Recharts for Vue)
+
+## Décision
+
+On utilise **D3 en mode hybride** :
+
+- **D3 pour la logique** : scales (`d3-scale`), axes (`d3-axis`), sélections pour le brush et zoom (`d3-brush`, `d3-zoom`), formats (`d3-time-format`)
+- **Vue pour le rendu** : les éléments SVG (`<path>`, `<rect>`, `<circle>`, `<g>`) sont rendus via les templates Vue, avec les attributs calculés depuis les scales D3
+- **D3 pour les interactions complexes** : on accepte de manipuler le DOM via `d3-select` pour les interactions avancées (brush, zoom), en ciblant des `ref` scopés
+
+## Conséquences
+
+### Positives
+
+- **Le meilleur des deux mondes** : réactivité Vue pour le rendu déclaratif, puissance D3 pour les calculs et interactions
+- **Démonstration réelle de D3** : on n'utilise pas une lib qui cache D3 derrière elle, on l'utilise explicitement (requis par l'annonce)
+- **Performance** : Vue reactivity optimise les re-renders, D3 n'est invoqué que pour ce qu'il sait faire mieux
+- **Testabilité** : les fonctions purs de scales et aggregations sont testables unitairement
+
+### Négatives
+
+- **Courbe d'apprentissage** : maîtriser à la fois Vue et D3 demande plus qu'un seul des deux
+- **Attention aux conflits** : ne jamais mixer reactivity Vue et manipulation DOM D3 sur les mêmes éléments (règle de séparation)
+
+## Conventions d'usage
+
+### Architecture d'un chart
+
+```
+composables/
+  useTimeScale.ts       # retourne un scale D3 réactif à la plage de dates
+  useLinearScale.ts     # retourne un scale D3 réactif au domaine Y
+  useD3Brush.ts         # attache un d3-brush à un ref, émet des events Vue
+
+components/molecules/
+  charts/
+    TimeSeriesChart.vue   # orchestrateur : reçoit data + config, rend les axes/courbes
+    ChartAxis.vue         # <g> qui rend un axe (via D3 select dans onMounted)
+    ChartBrush.vue        # <g> qui attache le brush
+    ChartLine.vue         # <path> dont le `d` est calculé depuis les scales
+```
+
+### Exemple de répartition
+
+```vue
+<!-- TimeSeriesChart.vue -->
+<template>
+  <svg :viewBox="viewBox" ref="svgRef">
+    <g :transform="`translate(${margin.left}, ${margin.top})`">
+      <ChartAxis :scale="xScale" orientation="bottom" :transform="`translate(0, ${innerHeight})`" />
+      <ChartAxis :scale="yScale" orientation="left" />
+      <ChartLine :data="points" :xScale="xScale" :yScale="yScale" />
+      <ChartBrush v-if="brushEnabled" :xScale="xScale" @brush="onBrush" />
+    </g>
+  </svg>
+</template>
+
+<script setup lang="ts">
+import { computed } from 'vue';
+import { scaleTime, scaleLinear } from 'd3-scale';
+
+const props = defineProps<{ data: Point[]; width: number; height: number }>();
+
+const xScale = computed(() =>
+  scaleTime()
+    .domain(/* … */)
+    .range([0, innerWidth.value])
+);
+// etc.
+</script>
+```
+
+### Règles
+
+- **Jamais** de manipulation D3 sur les `<path>` ou `<circle>` rendus par Vue — ces éléments sont pilotés par les attributs computed
+- **D3 select autorisé** uniquement sur les groupes `<g>` dédiés aux axes, brush, zoom
+- **ResizeObserver** dans un composable pour rafraîchir les scales sur resize
+
+## Accessibilité (NFR-2.2.5)
+
+Chaque chart doit s'accompagner :
+- D'un **titre explicite** dans `<title>` du `<svg>`
+- D'un `<desc>` résumant les valeurs principales
+- D'un **tableau de données** alternatif accessible via un toggle (par défaut visuellement caché, révélé par `sr-only` ou bouton "Voir les données")
+
+## Alternatives écartées
+
+### Chart.js for Vue
+
+Écartée. Ne démontre pas la maîtrise de D3 (critère annonce). Abstraction trop haute.
+
+### D3 vanilla pur (pas de templates Vue pour le SVG)
+
+Écartée. Perd les bénéfices de la reactivity Vue, rend les charts moins inspectables dans le DOM (tout est construit impérativement).
+
+### Observable Plot
+
+Écartée. Excellent pour proto rapide, mais présente le même problème que Chart.js : cache D3, moins démonstratif.
