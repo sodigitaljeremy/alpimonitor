@@ -26,6 +26,16 @@ Services :
 
 Les sources `apps/*/src` et `packages/shared/src` sont bind-mountées — le hot-reload fonctionne sans rebuild.
 
+### Seed de démo
+
+Données de contexte (bassin Borgne, 3 stations, capteurs, seuils, glaciers Ferpècle/Mont Miné, captages Grande Dixence) — idempotent, ré-exécutable à volonté :
+
+```bash
+pnpm --filter @alpimonitor/api exec prisma db seed
+```
+
+Les mesures hydrologiques ne sont pas seedées — elles arrivent via l'ingestion OFEV.
+
 ## Déploiement (production)
 
 Cible : Coolify v4 sur VPS Hetzner, Postgres containerisé, Traefik géré par Coolify pour le routage et TLS Let's Encrypt.
