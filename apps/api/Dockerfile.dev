@@ -1,6 +1,8 @@
 FROM node:20-alpine
 
-RUN corepack enable && corepack prepare pnpm@10.33.0 --activate
+# libssl3 + openssl: required by Prisma query engine on alpine.
+RUN apk add --no-cache libssl3 openssl \
+  && corepack enable && corepack prepare pnpm@10.33.0 --activate
 
 WORKDIR /app
 
@@ -11,9 +13,18 @@ COPY apps/api/package.json ./apps/api/
 COPY apps/web/package.json ./apps/web/
 
 # --ignore-scripts skips simple-git-hooks prepare (no .git inside this container).
+# Prisma engine is fetched explicitly below via `prisma generate`.
 RUN pnpm install --frozen-lockfile --ignore-scripts
 
-# Bind-mounted at runtime from host; this just reserves the path.
+# Copy the Prisma schema so `prisma generate` has something to compile at build
+# time. The same path is bind-mounted at runtime, so host edits remain authoritative.
+COPY apps/api/prisma ./apps/api/prisma
+
+# Pre-generate the client into the container node_modules (which is preserved
+# by the anonymous volume in docker-compose). The `dev` script re-runs generate
+# on startup to pick up schema changes without rebuild.
+RUN cd apps/api && pnpm exec prisma generate
+
 WORKDIR /app/apps/api
 
 EXPOSE 3000

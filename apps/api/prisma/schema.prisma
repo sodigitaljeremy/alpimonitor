@@ -1,0 +1,185 @@
+// AlpiMonitor — Prisma schema
+// Reflects docs/architecture/data-model.md. Keep them in sync on any change.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------- Enums ----------
+
+enum FlowType {
+  NATURAL
+  RESIDUAL
+  DOTATION
+}
+
+enum Parameter {
+  DISCHARGE
+  WATER_LEVEL
+  TEMPERATURE
+  TURBIDITY
+}
+
+enum Direction {
+  ABOVE
+  BELOW
+}
+
+enum AlertType {
+  THRESHOLD_EXCEEDED
+  STATISTICAL_ANOMALY
+  STATION_OFFLINE
+}
+
+enum AlertLevel {
+  INFO
+  VIGILANCE
+  ALERT
+}
+
+enum Role {
+  ADMIN
+}
+
+// ---------- Models ----------
+
+model Catchment {
+  id          String    @id @default(cuid())
+  name        String    @unique
+  description String?
+  areaKm2     Float?
+  stations    Station[]
+  createdAt   DateTime  @default(now())
+}
+
+model Station {
+  id           String           @id @default(cuid())
+  ofevCode     String           @unique
+  name         String
+  riverName    String
+  latitude     Float
+  longitude    Float
+  altitudeM    Float
+  catchmentId  String
+  catchment    Catchment        @relation(fields: [catchmentId], references: [id])
+  flowType     FlowType         @default(NATURAL)
+  operatorName String           @default("OFEV")
+  isActive     Boolean          @default(true)
+  sensors      Sensor[]
+  thresholds   Threshold[]
+  alerts       Alert[]
+  glaciers     StationGlacier[]
+  withdrawals  Withdrawal[]
+  auditEntries ThresholdAudit[]
+  createdAt    DateTime         @default(now())
+}
+
+model Sensor {
+  id           String        @id @default(cuid())
+  stationId    String
+  station      Station       @relation(fields: [stationId], references: [id])
+  parameter    Parameter
+  unit         String
+  isActive     Boolean       @default(true)
+  measurements Measurement[]
+  createdAt    DateTime      @default(now())
+
+  @@unique([stationId, parameter])
+}
+
+model Measurement {
+  id         String   @id @default(cuid())
+  sensorId   String
+  sensor     Sensor   @relation(fields: [sensorId], references: [id])
+  recordedAt DateTime
+  value      Float
+  ingestedAt DateTime @default(now())
+
+  @@unique([sensorId, recordedAt])
+  @@index([sensorId, recordedAt(sort: Desc)])
+}
+
+model Threshold {
+  id             String    @id @default(cuid())
+  stationId      String
+  station        Station   @relation(fields: [stationId], references: [id])
+  parameter      Parameter
+  vigilanceValue Float
+  alertValue     Float
+  direction      Direction @default(ABOVE)
+  updatedAt      DateTime  @updatedAt
+
+  @@unique([stationId, parameter])
+}
+
+model Alert {
+  id             String     @id @default(cuid())
+  stationId      String
+  station        Station    @relation(fields: [stationId], references: [id])
+  type           AlertType
+  level          AlertLevel
+  parameter      Parameter
+  triggerValue   Float
+  thresholdValue Float?
+  openedAt       DateTime   @default(now())
+  closedAt       DateTime?
+  metadata       Json?
+
+  @@index([stationId, openedAt(sort: Desc)])
+  @@index([closedAt])
+}
+
+model Glacier {
+  id           String           @id @default(cuid())
+  name         String           @unique
+  altitudeMinM Float?
+  altitudeMaxM Float?
+  stations     StationGlacier[]
+}
+
+model StationGlacier {
+  stationId String
+  glacierId String
+  station   Station @relation(fields: [stationId], references: [id])
+  glacier   Glacier @relation(fields: [glacierId], references: [id])
+
+  @@id([stationId, glacierId])
+}
+
+model Withdrawal {
+  id             String   @id @default(cuid())
+  name           String
+  operatorName   String   @default("Grande Dixence SA")
+  altitudeM      Float
+  latitude       Float
+  longitude      Float
+  annualVolumeM3 Float?
+  stationId      String?
+  station        Station? @relation(fields: [stationId], references: [id])
+}
+
+model User {
+  id           String           @id @default(cuid())
+  username     String           @unique
+  passwordHash String
+  role         Role             @default(ADMIN)
+  auditEntries ThresholdAudit[]
+  createdAt    DateTime         @default(now())
+}
+
+model ThresholdAudit {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id])
+  stationId String
+  station   Station   @relation(fields: [stationId], references: [id])
+  parameter Parameter
+  before    Json
+  after     Json
+  changedAt DateTime  @default(now())
+}

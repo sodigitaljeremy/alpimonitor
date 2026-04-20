@@ -45,5 +45,14 @@
     "*.{json,md,yaml,yml,css,html}": [
       "prettier --write"
     ]
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@prisma/client",
+      "@prisma/engines",
+      "esbuild",
+      "prisma",
+      "simple-git-hooks"
+    ]
   }
 }
