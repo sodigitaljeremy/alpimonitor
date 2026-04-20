@@ -1,0 +1,21 @@
+FROM node:20-alpine
+
+RUN corepack enable && corepack prepare pnpm@10.33.0 --activate
+
+WORKDIR /app
+
+# Workspace manifests first — maximises Docker layer cache on source changes.
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc tsconfig.base.json ./
+COPY packages/shared/package.json ./packages/shared/
+COPY apps/api/package.json ./apps/api/
+COPY apps/web/package.json ./apps/web/
+
+# --ignore-scripts skips simple-git-hooks prepare (no .git inside this container).
+RUN pnpm install --frozen-lockfile --ignore-scripts
+
+# Bind-mounted at runtime from host; this just reserves the path.
+WORKDIR /app/apps/api
+
+EXPOSE 3000
+
+CMD ["pnpm", "dev"]
