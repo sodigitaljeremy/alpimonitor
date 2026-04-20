@@ -26,6 +26,26 @@ Services :
 
 Les sources `apps/*/src` et `packages/shared/src` sont bind-mountées — le hot-reload fonctionne sans rebuild.
 
+## Déploiement (production)
+
+Cible : Coolify v4 sur VPS Hetzner, Postgres containerisé, Traefik géré par Coolify pour le routage et TLS Let's Encrypt.
+
+Fichiers concernés :
+
+- `apps/api/Dockerfile` — image runtime multi-stage (tini PID 1, user non-root, `prisma migrate deploy` au démarrage)
+- `apps/web/Dockerfile` + `apps/web/nginx.conf` — build Vite puis service statique via nginx alpine (SPA fallback, cache assets, gzip)
+- `docker-compose.prod.yml` — une seule ressource Coolify regroupant `postgres` + `api` + `web`
+- `.env.production.example` — variables à renseigner dans le panneau Coolify (`DATABASE_URL`, `CORS_ORIGINS`, `VITE_API_URL`, secrets Postgres)
+
+Smoke test en local (images prod sans bind-mount) :
+
+```bash
+cp .env.production.example .env.production
+docker compose -f docker-compose.prod.yml --env-file .env.production up --build
+```
+
+Les domaines `alpimonitor.fr`, `www.alpimonitor.fr` et `api.alpimonitor.fr` sont mappés dans l'UI Coolify vers les services `web` (port 80) et `api` (port 3000).
+
 ## Documentation
 
 La spec complète du projet vit dans `docs/` :
