@@ -1,5 +1,7 @@
 # AlpiMonitor
 
+[![CI](https://github.com/sodigitaljeremy/alpimonitor/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/sodigitaljeremy/alpimonitor/actions/workflows/ci.yml)
+
 Tableau de bord hydrologique du bassin de la Borgne (Valais, Suisse) — projet de démonstration technique pour une candidature Front-End au [CREALP](https://www.crealp.ch).
 
 Consomme les données ouvertes de l'Office fédéral de l'environnement (OFEV) et les met en scène pour une lecture rapide par les acteurs du territoire alpin.

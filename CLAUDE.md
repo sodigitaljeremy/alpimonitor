@@ -99,16 +99,18 @@ alpimonitor/
 
 > **À mettre à jour à la fin de chaque session Claude Code.**
 
-**Sprint** : 0 (pré-dev, cadrage)
-**Date dernière mise à jour** : 2026-04-18
-**Statut** : Documentation initiale du projet terminée.
-**Prochaine tâche** : J1 — Initialiser le monorepo (apps/web + apps/api + packages/shared), configurer Docker compose, setup Prisma et première migration `init`.
+**Sprint** : 1 (J1-J3 — fondations + deploy + CI)
+**Date dernière mise à jour** : 2026-04-20
+**Statut** : US-1.1 → US-1.6 livrées. Production live sur Coolify (https://alpimonitor.fr, https://api.alpimonitor.fr). Seed de contexte (stations Borgne, glaciers, captages) idempotent en place. CI GitHub Actions (lint + typecheck + tests + build) sur push main + PR.
+**Prochaine tâche** : US-2.1 — Ingestion OFEV (fetch XML `hydroweb.xml` + discovery stations + upsert `Measurement` + cron 10 min + réconciliation `ofevCode` des stations TBD).
 **Blocages** : aucun
 
 ### Historique des sessions
 
 - **2026-04-18** : Génération du context pack (business, domain, data-sources, brief, PRD, architecture overview, data model, API contracts, 6 ADR, design system, conventions).
 - **2026-04-18 (v2)** : Ajout de `docs/context/internal-projects.md` (synthèse rapports d'activité CREALP 2022-2024). Enrichissement ciblé de `business.md` (structure équipe IT, chiffres CA, Frédéric Etter).
+- **2026-04-20** : US-1.3 (Prisma schema + 10 models + migration init + /health check DB), US-1.6 (Dockerfiles prod api/web + docker-compose.prod.yml + nginx SPA + env template). Déploiement Coolify sur VPS Hetzner : GitHub App `sodigitaljeremy` branchée, ressource `alpimonitor-prod` créée, 3 services (postgres + api + web) live derrière Traefik + Let's Encrypt sur alpimonitor.fr / www / api. Push `main` = auto-deploy. Smoke test externe : /api/v1/health renvoie `{status:"ok",database:"ok"}`, SPA Vite servie, 307 HTTP→HTTPS OK.
+- **2026-04-20 (v2)** : US-1.4 (seed idempotent : catchment Borgne, 3 stations dont Bramois avec `ofevCode=2011` confirmé + 2 TBD, sensors DISCHARGE/WATER_LEVEL, thresholds ABOVE, 2 glaciers Ferpècle/Mont Miné, 2 captages Grande Dixence). US-1.5 (workflow `.github/workflows/ci.yml` Node 20 + pnpm 10.33.0 : install → prisma generate → format:check → lint → typecheck → test → build, avec concurrency cancel-in-progress et cache pnpm store). Badge CI dans le README.
 
 ## Non-goals rappelés
 
