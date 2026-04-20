@@ -1,0 +1,11 @@
+node_modules
+dist
+build
+coverage
+pnpm-lock.yaml
+.vite
+
+# Author-written markdown content: keep as-is, don't enforce Prettier style
+docs/**/*.md
+CLAUDE.md
+README.md

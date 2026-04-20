@@ -10,3 +10,7 @@ build/
 .vscode/
 coverage/
 *.swp
+.eslintcache
+.vite/
+.tsbuildinfo
+**/*.tsbuildinfo
