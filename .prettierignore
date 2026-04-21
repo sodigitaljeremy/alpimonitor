@@ -9,3 +9,7 @@ pnpm-lock.yaml
 docs/**/*.md
 CLAUDE.md
 README.md
+
+# Discovery artifacts & ingestion fixtures (raw upstream payloads)
+apps/api/scripts/output/
+apps/api/tests/__fixtures__/

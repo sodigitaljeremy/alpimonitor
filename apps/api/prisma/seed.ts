@@ -1,14 +1,19 @@
-// AlpiMonitor — seed of context entities for the Borgne basin demo.
+// AlpiMonitor — seed of context entities for the Valais / Borgne demo.
 //
-// Seeded: catchment, stations (with OFEV codes where known), sensors,
-// thresholds, glaciers + station-glacier links, Grande Dixence withdrawals.
-// Measurements are NOT seeded here — they come from the OFEV ingestion
-// (US-2.1). Running this script on an empty DB or a seeded DB is safe:
-// every upsert keys on a unique column.
+// Seeded: catchment, stations (LIVE Rhône from LINDAS + RESEARCH Borgne
+// placeholders), sensors, thresholds, glaciers + station-glacier links,
+// Grande Dixence withdrawals. Measurements are NOT seeded here — they come
+// from the LINDAS ingestion cron (US-2.1). Running this script on an empty
+// DB or a seeded DB is safe: every upsert keys on a unique column.
+//
+// Station selection reflects ADR-007:
+//   LIVE     = ingested from LINDAS (BAFU open data on Rhône)
+//   RESEARCH = CREALP / Grande Dixence network on the Borgne, not public;
+//              code stays TBD-* until the research feed is integrated.
 //
 // Run: pnpm --filter @alpimonitor/api exec prisma db seed
 
-import { PrismaClient, Direction, FlowType, Parameter } from '@prisma/client';
+import { PrismaClient, DataSource, Direction, FlowType, Parameter } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
@@ -33,31 +38,83 @@ type StationSeed = {
   longitude: number;
   altitudeM: number;
   flowType: FlowType;
+  operatorName: string;
+  dataSource: DataSource;
 };
 
-// OFEV codes: Bramois = "2011" (confirmé dans l'exemple XML de
-// docs/context/data-sources.md). Les autres stations sont marquées
-// TBD-<slug> en attendant la discovery US-2.1 (script qui lit le flux
-// OFEV réel et réconcilie les codes). Le upsert sur ofevCode permettra
-// de remplacer les placeholders proprement.
+// Coordinates for LIVE stations come from LINDAS discovery
+// (apps/api/scripts/discover-ofev-stations.ts, 2026-04-20). Altitudes
+// are BAFU-published station elevations. The Borgne RESEARCH stations
+// keep human-placed coords for the Val d'Hérens villages — close enough
+// for the map narrative, to be refined when the CREALP feed lands.
 const STATIONS: StationSeed[] = [
+  // --- LIVE BAFU (ingested from LINDAS) ---
+  {
+    ofevCode: '2346',
+    name: 'Brig',
+    riverName: 'Rhône',
+    latitude: 46.3169,
+    longitude: 7.9751,
+    altitudeM: 677,
+    flowType: FlowType.NATURAL,
+    operatorName: 'OFEV',
+    dataSource: DataSource.LIVE,
+  },
   {
     ofevCode: '2011',
+    name: 'Sion',
+    riverName: 'Rhône',
+    latitude: 46.2191,
+    longitude: 7.3579,
+    altitudeM: 483,
+    flowType: FlowType.NATURAL,
+    operatorName: 'OFEV',
+    dataSource: DataSource.LIVE,
+  },
+  {
+    ofevCode: '2630',
+    name: 'Sion',
+    riverName: 'Sionne',
+    latitude: 46.2305,
+    longitude: 7.366,
+    altitudeM: 510,
+    flowType: FlowType.NATURAL,
+    operatorName: 'OFEV',
+    dataSource: DataSource.LIVE,
+  },
+  {
+    ofevCode: '2009',
+    name: 'Porte du Scex',
+    riverName: 'Rhône',
+    latitude: 46.35,
+    longitude: 6.889,
+    altitudeM: 377,
+    flowType: FlowType.NATURAL,
+    operatorName: 'OFEV',
+    dataSource: DataSource.LIVE,
+  },
+  // --- RESEARCH (CREALP / Grande Dixence, not publicly ingestable) ---
+  {
+    ofevCode: 'TBD-BRAMOIS',
     name: 'Borgne — Bramois',
     riverName: 'La Borgne',
     latitude: 46.2333,
     longitude: 7.3833,
     altitudeM: 490,
     flowType: FlowType.NATURAL,
+    operatorName: 'CREALP',
+    dataSource: DataSource.RESEARCH,
   },
   {
-    ofevCode: 'TBD-LES-HAUDERES',
+    ofevCode: 'TBD-HAUDERES',
     name: 'Borgne — Les Haudères',
     riverName: 'La Borgne',
     latitude: 46.0833,
     longitude: 7.5167,
     altitudeM: 1450,
     flowType: FlowType.RESIDUAL,
+    operatorName: 'CREALP',
+    dataSource: DataSource.RESEARCH,
   },
   {
     ofevCode: 'TBD-EVOLENE',
@@ -67,6 +124,8 @@ const STATIONS: StationSeed[] = [
     longitude: 7.4983,
     altitudeM: 1370,
     flowType: FlowType.RESIDUAL,
+    operatorName: 'CREALP',
+    dataSource: DataSource.RESEARCH,
   },
 ];
 
@@ -82,12 +141,50 @@ async function seedStations(catchmentId: string) {
         longitude: s.longitude,
         altitudeM: s.altitudeM,
         flowType: s.flowType,
+        operatorName: s.operatorName,
+        dataSource: s.dataSource,
       },
-      create: { ...s, catchmentId, operatorName: 'OFEV' },
+      create: { ...s, catchmentId },
     });
     out.push(station);
   }
   return out;
+}
+
+// Remove stations whose ofevCode is no longer in the current seed list.
+// This converges any DB (dev or prod) across seed-level renames — e.g.
+// TBD-LES-HAUDERES → TBD-HAUDERES (2026-04-20, ADR-007). Dependent rows
+// are cleared in FK-safe order. The Measurement table is touched because
+// future ingestion will have populated it between seed runs.
+async function pruneStaleStations(currentOfevCodes: string[]) {
+  const stale = await prisma.station.findMany({
+    where: { ofevCode: { notIn: currentOfevCodes } },
+    select: { id: true, ofevCode: true, name: true },
+  });
+  if (stale.length === 0) return;
+  const staleIds = stale.map((s) => s.id);
+
+  const sensors = await prisma.sensor.findMany({
+    where: { stationId: { in: staleIds } },
+    select: { id: true },
+  });
+  const sensorIds = sensors.map((s) => s.id);
+
+  await prisma.measurement.deleteMany({ where: { sensorId: { in: sensorIds } } });
+  await prisma.alert.deleteMany({ where: { stationId: { in: staleIds } } });
+  await prisma.thresholdAudit.deleteMany({ where: { stationId: { in: staleIds } } });
+  await prisma.threshold.deleteMany({ where: { stationId: { in: staleIds } } });
+  await prisma.sensor.deleteMany({ where: { stationId: { in: staleIds } } });
+  await prisma.withdrawal.updateMany({
+    where: { stationId: { in: staleIds } },
+    data: { stationId: null },
+  });
+  await prisma.stationGlacier.deleteMany({ where: { stationId: { in: staleIds } } });
+  await prisma.station.deleteMany({ where: { id: { in: staleIds } } });
+
+  console.log(
+    `  pruned ${stale.length} stale station(s): ${stale.map((s) => `${s.ofevCode}/${s.name}`).join(', ')}`
+  );
 }
 
 const SENSORS: Array<{ parameter: Parameter; unit: string }> = [
@@ -109,44 +206,58 @@ async function seedSensors(stationIds: string[]) {
   }
 }
 
-// Seuils de démonstration pour régime nival-glaciaire de tête de bassin.
-// Les valeurs réelles seront calibrées par les hydrologues CREALP sur
-// historique long (hors scope v1).
-const THRESHOLDS: Array<{
-  parameter: Parameter;
-  vigilanceValue: number;
-  alertValue: number;
-  direction: Direction;
-}> = [
+// Per-station DISCHARGE thresholds (m³/s, ABOVE direction = crue).
+// Values are rough orders of magnitude: significantly above the typical
+// mean flow, so the demo doesn't generate false alerts on routine data.
+// Real calibration would use BAFU's historical return periods (Q10, Q100)
+// and is out of scope for v1.
+//
+// BAFU also publishes its own 5-level dangerLevel per observation —
+// treated as the authoritative signal downstream; these thresholds are
+// the operator-configurable layer on top.
+//
+// WATER_LEVEL is deliberately skipped here: BAFU exposes it as metres
+// above sea level (altitude-referenced), not cm above bed, so a single
+// generic threshold would be meaningless. v2 will add per-station
+// bed-referenced thresholds once we have the local zero offsets.
+const DISCHARGE_THRESHOLDS_BY_CODE: Record<string, { vigilanceValue: number; alertValue: number }> =
   {
-    parameter: Parameter.DISCHARGE,
-    vigilanceValue: 50,
-    alertValue: 100,
-    direction: Direction.ABOVE,
-  },
-  {
-    parameter: Parameter.WATER_LEVEL,
-    vigilanceValue: 150,
-    alertValue: 200,
-    direction: Direction.ABOVE,
-  },
-];
+    '2346': { vigilanceValue: 200, alertValue: 400 }, // Brig / Rhône
+    '2011': { vigilanceValue: 500, alertValue: 800 }, // Sion / Rhône
+    '2630': { vigilanceValue: 5, alertValue: 15 }, // Sion / Sionne (small urban tributary)
+    '2009': { vigilanceValue: 600, alertValue: 1000 }, // Porte du Scex / Rhône
+    'TBD-BRAMOIS': { vigilanceValue: 50, alertValue: 100 },
+    'TBD-HAUDERES': { vigilanceValue: 20, alertValue: 40 },
+    'TBD-EVOLENE': { vigilanceValue: 25, alertValue: 50 },
+  };
 
-async function seedThresholds(stationIds: string[]) {
-  for (const stationId of stationIds) {
-    for (const t of THRESHOLDS) {
-      await prisma.threshold.upsert({
-        where: {
-          stationId_parameter: { stationId, parameter: t.parameter },
-        },
-        update: {
-          vigilanceValue: t.vigilanceValue,
-          alertValue: t.alertValue,
-          direction: t.direction,
-        },
-        create: { stationId, ...t },
-      });
-    }
+async function seedThresholds(stations: Array<{ id: string; ofevCode: string }>) {
+  // Drop dimensions we no longer seed (v2 will reintroduce bed-referenced
+  // WATER_LEVEL thresholds once the zero offsets per station are known).
+  await prisma.threshold.deleteMany({
+    where: { parameter: { notIn: [Parameter.DISCHARGE] } },
+  });
+
+  for (const station of stations) {
+    const t = DISCHARGE_THRESHOLDS_BY_CODE[station.ofevCode];
+    if (!t) continue;
+    await prisma.threshold.upsert({
+      where: {
+        stationId_parameter: { stationId: station.id, parameter: Parameter.DISCHARGE },
+      },
+      update: {
+        vigilanceValue: t.vigilanceValue,
+        alertValue: t.alertValue,
+        direction: Direction.ABOVE,
+      },
+      create: {
+        stationId: station.id,
+        parameter: Parameter.DISCHARGE,
+        vigilanceValue: t.vigilanceValue,
+        alertValue: t.alertValue,
+        direction: Direction.ABOVE,
+      },
+    });
   }
 }
 
@@ -168,9 +279,19 @@ async function seedGlaciers() {
   return out;
 }
 
-async function seedStationGlaciers(stationIds: string[], glacierIds: string[]) {
-  // Chaque station du Val d'Hérens draine Ferpècle et Mont Miné (amont commun).
-  for (const stationId of stationIds) {
+async function seedStationGlaciers(borgneStationIds: string[], glacierIds: string[]) {
+  // Ferpècle and Mont Miné drain into La Borgne — so only Borgne stations
+  // carry this relation. Rhône stations aren't fed by these glaciers
+  // directly enough to warrant the edge.
+  //
+  // Prune first: earlier seed revisions linked every station to every
+  // glacier (including the ex-Bramois/ex-2011 that is now Sion/Rhône).
+  // Removing edges outside the Borgne set makes the seed idempotent
+  // across station-reclassification without needing a migrate reset.
+  await prisma.stationGlacier.deleteMany({
+    where: { stationId: { notIn: borgneStationIds } },
+  });
+  for (const stationId of borgneStationIds) {
     for (const glacierId of glacierIds) {
       await prisma.stationGlacier.upsert({
         where: { stationId_glacierId: { stationId, glacierId } },
@@ -243,20 +364,24 @@ async function main() {
   console.log('→ Stations');
   const stations = await seedStations(catchment.id);
   const stationIds = stations.map((s) => s.id);
+  const borgneStationIds = stations.filter((s) => s.riverName === 'La Borgne').map((s) => s.id);
   const stationsByName = new Map(stations.map((s) => [s.name, s.id]));
+
+  console.log('→ Prune stale stations');
+  await pruneStaleStations(STATIONS.map((s) => s.ofevCode));
 
   console.log('→ Sensors');
   await seedSensors(stationIds);
 
   console.log('→ Thresholds');
-  await seedThresholds(stationIds);
+  await seedThresholds(stations.map((s) => ({ id: s.id, ofevCode: s.ofevCode })));
 
   console.log('→ Glaciers');
   const glaciers = await seedGlaciers();
 
   console.log('→ StationGlacier links');
   await seedStationGlaciers(
-    stationIds,
+    borgneStationIds,
     glaciers.map((g) => g.id)
   );
 
@@ -266,6 +391,8 @@ async function main() {
   const counts = {
     catchments: await prisma.catchment.count(),
     stations: await prisma.station.count(),
+    stationsLive: await prisma.station.count({ where: { dataSource: 'LIVE' } }),
+    stationsResearch: await prisma.station.count({ where: { dataSource: 'RESEARCH' } }),
     sensors: await prisma.sensor.count(),
     thresholds: await prisma.threshold.count(),
     glaciers: await prisma.glacier.count(),
