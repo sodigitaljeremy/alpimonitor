@@ -1,9 +1,25 @@
 <script setup lang="ts">
+import { storeToRefs } from 'pinia';
+import { computed, onMounted } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import MSectionHeader from '@/components/molecules/MSectionHeader.vue';
+import OStationMap from '@/components/organisms/OStationMap.vue';
+import { useStationsStore } from '@/stores/stations';
 
 const { t } = useI18n();
+
+const stationsStore = useStationsStore();
+const { stations, hasLoadedOnce, error } = storeToRefs(stationsStore);
+
+// The placeholder stays visible until the first response lands. After that,
+// OStationMap takes over — even when the list is empty we still want the
+// map visible (it can be used to frame the catchment).
+const showMap = computed(() => hasLoadedOnce.value && error.value === null);
+
+onMounted(() => {
+  void stationsStore.fetchStations();
+});
 </script>
 
 <template>
@@ -18,13 +34,19 @@ const { t } = useI18n();
       />
     </div>
 
-    <div class="o-map-section__frame" role="region" aria-label="Carte du réseau">
-      <div class="o-map-section__placeholder">
-        <p class="o-map-section__placeholder-text">{{ t('map.stubHint') }}</p>
+    <div class="o-map-section__frame" role="region" :aria-label="t('map.title')">
+      <OStationMap v-if="showMap" :stations="stations" />
+
+      <div v-else-if="error" class="o-map-section__placeholder">
+        <p class="o-map-section__placeholder-text">{{ t('map.error') }}</p>
       </div>
 
-      <aside class="o-map-section__legend" aria-label="Légende">
-        <p class="o-map-section__legend-title">Légende</p>
+      <div v-else class="o-map-section__placeholder">
+        <p class="o-map-section__placeholder-text">{{ t('map.loading') }}</p>
+      </div>
+
+      <aside class="o-map-section__legend" :aria-label="t('map.legend.title')">
+        <p class="o-map-section__legend-title">{{ t('map.legend.title') }}</p>
         <ul class="o-map-section__legend-list">
           <li class="o-map-section__legend-item">
             <span class="o-map-section__marker o-map-section__marker--federal" aria-hidden="true" />
@@ -72,8 +94,11 @@ const { t } = useI18n();
   @apply rounded-md bg-white/80 px-4 py-2 font-mono text-sm text-slate-alpi shadow-card backdrop-blur;
 }
 
+/* Legend sits above the Leaflet canvas (z-index 400 by default), and the
+   Leaflet attribution takes the bottom-right. Keep our legend top-right
+   on desktop, bottom-left on mobile to avoid the attribution overlap. */
 .o-map-section__legend {
-  @apply absolute bottom-4 left-4 flex flex-col gap-2 rounded-md border border-slate-alpi/20 bg-white/95 px-4 py-3 text-sm shadow-card backdrop-blur sm:bottom-auto sm:left-auto sm:right-4 sm:top-4;
+  @apply absolute bottom-4 left-4 z-[500] flex flex-col gap-2 rounded-md border border-slate-alpi/20 bg-white/95 px-4 py-3 text-sm shadow-card backdrop-blur sm:bottom-auto sm:left-auto sm:right-4 sm:top-4;
 }
 
 .o-map-section__legend-title {

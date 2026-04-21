@@ -21,10 +21,18 @@
     "title": "Carte du réseau",
     "subtitle": "Stations fédérales et zones de recherche CREALP",
     "legend": {
+      "title": "Légende",
       "federal": "Station fédérale (live)",
       "research": "Zone de recherche CREALP"
     },
-    "stubHint": "Carte Leaflet — sera branchée en Temps 2"
+    "loading": "Chargement de la carte…",
+    "error": "Impossible de charger la carte",
+    "attribution": "© OpenStreetMap contributors",
+    "popup": {
+      "discharge": "Débit : {value} m³/s",
+      "noMeasurement": "Aucune mesure récente",
+      "researchNotice": "Réseau CREALP — non exposé publiquement"
+    }
   },
   "keyMetrics": {
     "title": "Chiffres clés",
