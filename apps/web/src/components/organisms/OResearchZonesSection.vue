@@ -44,6 +44,7 @@ const stations = useI18nList<ResearchStation>('researchZones.stations');
             :river="station.river"
             :context="station.context"
             kind="research"
+            theme="dark"
           />
         </div>
       </div>
