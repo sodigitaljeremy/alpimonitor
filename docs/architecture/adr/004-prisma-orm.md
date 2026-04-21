@@ -1,7 +1,8 @@
 # ADR-004 — Prisma comme ORM
 
 **Date** : 2026-04-18
-**Statut** : Acceptée
+**Statut** : Acceptée — implémentée
+**Implémentation** : `e9a35e1` (schéma initial 10 models + migration init + health check DB), `df82f87` (ajout `Station.dataSource` + `IngestionRun`). Singleton Prisma exposé via un plugin Fastify. Mapping DTO explicite dans `apps/api/src/services/`. Migrations versionnées sous `apps/api/prisma/migrations/`.
 
 ## Contexte
 

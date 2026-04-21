@@ -1,7 +1,8 @@
 # ADR-002 — Méthodologie ABEM pour les classes CSS
 
 **Date** : 2026-04-18
-**Statut** : Acceptée
+**Statut** : Acceptée — implémentée
+**Implémentation** : `7145e14` (tokens Tailwind + premiers atomes), `400f427` (scaffold 6 sections landing avec préfixes o-), `30ccf57` (refactor `MStationCard` — preuve que la convention tient hors host), `212193a` (purge des valeurs CSS brutes). La convention tient sur l'ensemble des composants shipped à ce jour (2026-04-21) : aucun composant `.vue` sans préfixe `a-/m-/o-/t-/p-`.
 
 ## Contexte
 

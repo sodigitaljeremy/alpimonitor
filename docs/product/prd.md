@@ -3,189 +3,187 @@
 > Product Requirements Document. Exigences fonctionnelles et non-fonctionnelles détaillées.
 > Référence principale pour la décomposition en user stories et en tickets de développement.
 
+## État du périmètre (audit 2026-04-21)
+
+Ce PRD a été rédigé à J1 (2026-04-18) avec un scope délibérément large pour couvrir à la fois la **démonstration candidature CREALP** (13 jours, deadline 2026-04-30) et une **roadmap produit long-terme**. À J4 (2026-04-20), le pivot **LINDAS SPARQL** (ADR-007) a invalidé l'hypothèse "flux XML OFEV" qui sous-tendait toute la section ingestion. Les user stories ont donc été réorganisées autour du livrable candidature et d'un backlog post-candidature.
+
+**Légende des statuts** :
+
+- ✅ **DONE** — livré, référence commit donnée
+- 🚧 **IN PROGRESS** — en cours dans le sprint en cours
+- ⏭ **DEFERRED** — conservé, reporté au-delà du 2026-04-30 (backlog v2)
+- ❌ **CANCELLED** — invalidé par une décision ultérieure (ADR, pivot scope, YAGNI)
+
+**Scope candidature (livrable 2026-04-30)** : carte + fiche station drawer + graphique 24 h + ingestion LINDAS automatique + observabilité (`/status`, `/health`) + seed idempotent + CI + déploiement Coolify. **Lecture seule**, français uniquement, aucun compte utilisateur.
+
+**Hors scope candidature mais conservé backlog** : comparaison multi-stations, alertes (détection + UI), admin seuils, export CSV, brush/zoom D3, E2E Playwright, Lighthouse formel. Ces items restent valides pour une continuation post-candidature mais ne seront pas utilisés comme critère d'évaluation par CREALP.
+
 ## 1. Exigences fonctionnelles
 
 ### 1.1 Vue d'ensemble du bassin (page d'accueil)
 
-**FR-1.1.1** L'utilisateur voit une carte interactive du bassin de la Borgne avec toutes les stations monitorées.
-**FR-1.1.2** Chaque station est représentée par un marker coloré selon son état courant :
-- Vert : état normal
-- Orange : seuil de vigilance atteint
-- Rouge : seuil d'alerte dépassé ou anomalie détectée
-- Gris : station hors-ligne / données anciennes (> 2h sans update)
-**FR-1.1.3** Au survol d'un marker, une tooltip affiche : nom station, dernière mesure, horodatage.
-**FR-1.1.4** Au clic sur un marker, l'utilisateur accède à la fiche détaillée de la station.
-**FR-1.1.5** Une liste textuelle des stations est disponible en complément de la carte (pour accessibilité clavier et SEO).
-**FR-1.1.6** Un panneau latéral affiche le nombre d'alertes actives et permet d'y accéder.
+**FR-1.1.1** ✅ **DONE in 47dabed** — Carte interactive Leaflet centrée sur le Rhône valaisan, 7 stations (4 LIVE BAFU + 3 RESEARCH Borgne) géolocalisées.
+**FR-1.1.2** ⏭ **DEFERRED** — Colorimétrie par état (vert/orange/rouge/gris) liée à la détection d'anomalies. **Motivation du report** : la détection d'anomalies (FR-1.6.5) et les alertes (1.4) sont hors scope candidature. La distinction actuelle `LIVE` (rempli, primary) vs `RESEARCH` (hollow, alpine) reflète la vraie ligne de fracture métier — le code couleur d'alerte s'y superposera quand les alertes arriveront.
+**FR-1.1.3** ✅ **DONE in 044a749** — Tooltip léger sur les LIVE au survol (nom + dernier débit), clic → drawer. Spécification initiale légèrement adaptée : on ouvre directement le drawer plutôt qu'une tooltip + fiche séparée, cf. ADR du choix "tooltip → drawer, pas de popup LIVE" dans le commit T2-C4.
+**FR-1.1.4** ✅ **DONE in 044a749** — Drawer latéral avec métadonnées + graphique 24 h. Pas de page séparée `/stations/:id` (décision recentrage candidature, cf. section 3.2 ci-dessous).
+**FR-1.1.5** ⏭ **DEFERRED** — Liste textuelle alternative des stations (SEO + a11y clavier). **Motivation** : reste important pour WCAG AA complet mais hors budget T3. À traiter dans un Temps 4 a11y formel post-candidature.
+**FR-1.1.6** ❌ **CANCELLED** — Panneau latéral d'alertes. **Motivation** : les alertes entières (épopée 1.4) sont hors scope candidature ; pas de panneau sans contenu.
 
 ### 1.2 Fiche station
 
-**FR-1.2.1** Affichage des métadonnées : nom, rivière, altitude, coordonnées, opérateur, paramètres mesurés.
-**FR-1.2.2** Carte d'état courant : dernière valeur de chaque paramètre + horodatage + comparaison à la moyenne saisonnière.
-**FR-1.2.3** Graphique temporel D3 de chaque paramètre sur une période configurable (24h / 7j / 30j / 90j).
-**FR-1.2.4** Bande colorée en arrière-plan du graphique indiquant les seuils (vigilance, alerte).
-**FR-1.2.5** Brush interactif permettant de zoomer sur une sous-période.
-**FR-1.2.6** Export CSV des données affichées.
-**FR-1.2.7** Indication claire du type de débit : naturel / résiduel / dotation, avec infobulle explicative.
+**FR-1.2.1** ✅ **DONE in 044a749** — Métadonnées dans le drawer : nom, rivière, coordonnées, ofevCode. Altitude + opérateur + paramètres présents dans la DB (`StationDTO`), non affichés aujourd'hui faute de place utile dans le drawer actuel.
+**FR-1.2.2** ⏭ **DEFERRED** — Dernière valeur + comparaison moyenne saisonnière. **Motivation** : la comparaison saisonnière requiert ≥ 1 an d'historique LINDAS accumulé, donc irréaliste en 13 jours (LINDAS n'expose que le tick courant ; l'historique naît du cron). Le drawer affiche les 24 h accumulées depuis le démarrage du cron — suffisant pour la démo.
+**FR-1.2.3** ✅ **DONE in 044a749** (partiel) — Graphique D3 **24 h uniquement**. Sélecteur de période (7 j / 30 j / 90 j) ⏭ **DEFERRED** — même motivation que FR-1.2.2.
+**FR-1.2.4** ❌ **CANCELLED** — Bande colorée de seuils en arrière-plan. **Motivation** : pas de seuils configurés en scope candidature (section 1.5 cancelled) ; bande colorée sans seuil est cosmétique.
+**FR-1.2.5** ⏭ **DEFERRED** — Brush interactif D3. Hors scope candidature (le graphique 24 h est assez court pour une lecture directe, l'intérêt du brush apparaît sur 7 j+).
+**FR-1.2.6** ⏭ **DEFERRED** — Export CSV. Hors scope candidature, trivial à ajouter en v2 (endpoint `/stations/:id/measurements.csv`).
+**FR-1.2.7** ⏭ **DEFERRED** — Infobulle naturel/résiduel/dotation. Le champ `flowType` existe déjà dans le modèle mais n'est pas exposé dans l'UI v1.
 
 ### 1.3 Comparaison multi-stations
 
-**FR-1.3.1** L'utilisateur peut sélectionner 2 à 4 stations pour comparaison.
-**FR-1.3.2** Graphique superposé D3 avec une courbe par station, couleurs distinctes.
-**FR-1.3.3** Légende cliquable pour masquer/afficher une courbe.
-**FR-1.3.4** Sélecteur de paramètre (débit, hauteur, température) — comparaison sur un seul paramètre à la fois.
+**FR-1.3.1 → FR-1.3.4** ❌ **CANCELLED (scope candidature)** — La page `/compare` est un feature post-candidature. **Motivation** : ajouter une page implique routing multi-page + sélecteur + overlays D3 (~2 j). Le livrable candidature est intentionnellement une **single-page scrollable** pour maximiser la densité d'impression en < 30 secondes de lecture recruteur. Conservé au backlog v2.
 
 ### 1.4 Alertes
 
-**FR-1.4.1** Liste paginée de toutes les alertes actives et historiques (30 derniers jours).
-**FR-1.4.2** Chaque alerte affiche : station, type (seuil dépassé / anomalie), valeur, seuil, timestamp, durée.
-**FR-1.4.3** Filtrage par station, par type, par niveau (vigilance/alerte).
-**FR-1.4.4** Une alerte est close automatiquement dès que la mesure repasse sous le seuil.
+**FR-1.4.1 → FR-1.4.4** ❌ **CANCELLED (scope candidature)** — **Motivation** : l'épopée alertes dépend de seuils (cancelled), de détection d'anomalies (deferred) et d'un cron d'évaluation post-ingestion. Le modèle Prisma `Alert` + `Threshold` reste en place (seed de démonstration) mais aucun code d'évaluation/UI n'est développé en v1 candidature. Conservé au backlog v2 si AlpiMonitor continue après l'entretien.
 
 ### 1.5 Administration des seuils (accès restreint)
 
-**FR-1.5.1** Authentification JWT par couple login/password en variables d'environnement (un seul admin en V1).
-**FR-1.5.2** Liste des stations avec seuils courants.
-**FR-1.5.3** Formulaire d'édition des seuils (vigilance, alerte) par station et par paramètre.
-**FR-1.5.4** Validation côté serveur (Zod) : cohérence seuils (alerte > vigilance pour hauteur d'eau par ex.).
-**FR-1.5.5** Historique des modifications de seuils (audit simple : qui, quand, valeur avant/après).
+**FR-1.5.1 → FR-1.5.5** ❌ **CANCELLED (scope candidature)** — **Motivation** : l'auth JWT + CRUD admin (2-3 j de dev) n'apporte aucune démonstration supplémentaire sur le poste Front-End. Le scope candidature est volontairement **read-only public, aucune page protégée**. Les seuils sont seedés en dur et immuables. Reporté en v2.
 
 ### 1.6 Ingestion des données (backend, pas d'UI)
 
-**FR-1.6.1** Job de fetch du flux OFEV toutes les 10 minutes.
-**FR-1.6.2** Parsing XML vers objets TypeScript typés.
-**FR-1.6.3** Validation Zod de chaque mesure avant persistence.
-**FR-1.6.4** Upsert idempotent (clé : stationId + parameter + timestamp).
-**FR-1.6.5** Calcul des anomalies après chaque ingestion (moyenne mobile 30j + écart-type).
-**FR-1.6.6** Création d'alerte si seuil dépassé ou anomalie statistique détectée.
-**FR-1.6.7** Logs structurés (pino) en cas d'échec de fetch ou de parsing.
+**FR-1.6.1** ✅ **DONE in 10609b9** (US-2.1) — Cron 10 min (configurable via `INGESTION_INTERVAL_MIN`). **Pivot majeur** : la source n'est plus le XML OFEV (mort au moment de la discovery, cf. ADR-007) mais **LINDAS SPARQL**.
+**FR-1.6.2** ❌ **REMPLACÉE par ADR-007** — Parsing XML → parsing **SPARQL JSON results** (voir `1fe5d36`).
+**FR-1.6.3** ✅ **DONE in 1fe5d36** — Validation Zod des bindings SPARQL avant persistance (`packages/shared/schemas/ingestion.ts`).
+**FR-1.6.4** ✅ **DONE in 1fe5d36** — Upsert idempotent sur `{stationId, parameter, timestamp}` (voir `apps/api/src/ingestion/lindas/`).
+**FR-1.6.5** ⏭ **DEFERRED** — Détection d'anomalies statistiques (moyenne mobile ± 2σ). Hors scope candidature (lié aux alertes).
+**FR-1.6.6** ⏭ **DEFERRED** — Création d'alertes sur seuil. Même motif que 1.5.
+**FR-1.6.7** ✅ **DONE in 10609b9** — Logs pino structurés sur échec ; `IngestionRun` persiste chaque tick (status + `stationsSeenCount` + `measurementsInsertedCount`) pour observabilité via `/status`.
 
 ## 2. Exigences non-fonctionnelles
 
 ### 2.1 Performance
 
-**NFR-2.1.1** Time to Interactive < 3s en 4G simulé, sur une page de station.
-**NFR-2.1.2** Interaction chart (zoom, brush) < 100ms.
-**NFR-2.1.3** Payload initial < 300 Ko (hors tuiles carto).
-**NFR-2.1.4** Lighthouse Performance ≥ 90 sur desktop, ≥ 80 sur mobile.
+**NFR-2.1.1 → NFR-2.1.4** 🚧 **IN PROGRESS** — Mesures Lighthouse prévues en Temps 4 polish. Bundle web à ce jour : `381 kB js / 128 kB gzip + 62 kB css / 13 kB gzip` (T2-C4 build). Au-dessus de la cible 300 kB ; Leaflet + D3 + Chart dominent. Cible NFR-2.1.3 à ré-évaluer après code-splitting éventuel en T4.
 
 ### 2.2 Accessibilité
 
-**NFR-2.2.1** Conformité WCAG 2.1 niveau AA visée.
-**NFR-2.2.2** Navigation clavier complète, ordre de focus cohérent, focus visible.
-**NFR-2.2.3** Contrastes texte/fond ≥ 4.5:1 pour texte normal, ≥ 3:1 pour texte large.
-**NFR-2.2.4** Toute information communiquée par couleur est aussi communiquée autrement (icône, texte).
-**NFR-2.2.5** Graphiques D3 accompagnés d'une alternative textuelle (tableau de données ou summary).
-**NFR-2.2.6** Attributs ARIA appropriés sur composants interactifs.
+**NFR-2.2.1 → NFR-2.2.6** 🚧 **IN PROGRESS (partiel)** — Contrastes OK (tokens design-system), focus visible, aria-label sur drawer, Escape fermeture, scroll-lock. **Manquants** : navigation clavier Leaflet, tableau de données alternatif aux charts (FR-1.1.5 + NFR-2.2.5), audit axe-core. Audit formel reporté en Temps 4.
 
 ### 2.3 Responsive
 
-**NFR-2.3.1** Usage confortable à partir de 375px de large.
-**NFR-2.3.2** Breakpoints Tailwind : sm (640), md (768), lg (1024), xl (1280).
-**NFR-2.3.3** Graphiques D3 redimensionnés dynamiquement via ResizeObserver.
+**NFR-2.3.1** ✅ **DONE in f94a0b7** — 375 px validé (header, sections, cartes, drawer full-width en T2-C4).
+**NFR-2.3.2** ✅ — Tokens Tailwind standards.
+**NFR-2.3.3** ✅ **DONE in 044a749** (chart) + **47dabed** (map) — ResizeObserver sur OHydroChart + OStationMap.
 
 ### 2.4 Sécurité
 
-**NFR-2.4.1** Helmet activé avec CSP stricte.
-**NFR-2.4.2** CORS restrictif (origines déclarées explicitement).
-**NFR-2.4.3** Rate limiting sur tous les endpoints (60 req/min par IP par défaut).
-**NFR-2.4.4** Validation Zod systématique des inputs.
-**NFR-2.4.5** JWT signé HS256, refresh token court (15 min access / 7j refresh), cookies httpOnly SameSite=Strict.
-**NFR-2.4.6** Bcrypt (coût ≥ 12) pour le mot de passe admin.
-**NFR-2.4.7** Secrets en variables d'environnement, jamais dans le code ni les logs.
-**NFR-2.4.8** Pas de SQL brut — tout via Prisma (protection injection).
-**NFR-2.4.9** Logs sans PII ni secrets.
+**NFR-2.4.1** ⏭ **DEFERRED** — Helmet + CSP stricte : non wired côté API (Fastify par défaut).
+**NFR-2.4.2** ✅ **DONE in c0ef094** — CORS avec origines déclarées (`ALLOWED_ORIGINS` env).
+**NFR-2.4.3** ⏭ **DEFERRED** — Rate limiting. Hors scope démo, CREALP peut tester tranquillement.
+**NFR-2.4.4** ✅ — Zod systématique sur tous les endpoints (packages/shared/schemas/).
+**NFR-2.4.5 → NFR-2.4.6** ❌ **CANCELLED** — JWT + bcrypt : liés à l'admin (section 1.5) cancelled.
+**NFR-2.4.7** ✅ — Secrets via env uniquement, `.env.production.example` documente.
+**NFR-2.4.8** ✅ — Prisma exclusivement, zéro SQL brut.
+**NFR-2.4.9** ✅ — Pino sans PII.
 
 ### 2.5 Qualité du code
 
-**NFR-2.5.1** TypeScript strict mode activé.
-**NFR-2.5.2** ESLint + Prettier configurés, pre-commit hook via simple-git-hooks ou husky.
-**NFR-2.5.3** Convention ABEM appliquée aux classes CSS (voir `docs/ui/design-system.md`).
-**NFR-2.5.4** Nommage en anglais pour le code, français pour les labels UI.
-**NFR-2.5.5** Conventional commits.
+**NFR-2.5.1** ✅ — TS strict activé.
+**NFR-2.5.2** ✅ **DONE in ce73196** — ESLint + Prettier + CI lint-staged.
+**NFR-2.5.3** ✅ — ABEM appliqué (audit continu).
+**NFR-2.5.4** ✅ — Code EN, UI FR (vue-i18n).
+**NFR-2.5.5** ✅ — Conventional commits, vérifiés par l'historique.
 
 ### 2.6 Tests
 
-**NFR-2.6.1** Tests unitaires Vitest sur la logique métier critique : calcul d'anomalies, évaluation de seuils, parsing XML, validations Zod.
-**NFR-2.6.2** Coverage ≥ 80 % sur `src/domain` et `src/services`.
-**NFR-2.6.3** Tests de composants Vue via Vitest + @vue/test-utils sur les composants interactifs clés.
-**NFR-2.6.4** Un test E2E Playwright sur le happy path principal : ouvrir la carte → cliquer station → voir chart → brush période.
-**NFR-2.6.5** Tous les tests tournent en CI (GitHub Actions) sur chaque push.
+**NFR-2.6.1** ✅ — Vitest sur logique métier (ingestion parser, services, stores). 70 tests API + 49 tests web au dernier commit.
+**NFR-2.6.2** ⏭ **DEFERRED** — Coverage formel ≥ 80 %. Pas mesuré aujourd'hui.
+**NFR-2.6.3** ✅ (partiel) — `@vue/test-utils` sur OStationDrawer, stores, composables. Couverture exhaustive des composants reportée.
+**NFR-2.6.4** ⏭ **DEFERRED** — E2E Playwright. Hors scope candidature (13 j serrés, ROI faible vs le reste).
+**NFR-2.6.5** ✅ **DONE in ce73196** — CI GitHub Actions exécute lint + typecheck + tests + build sur push main + PR.
 
 ### 2.7 Déploiement et ops
 
-**NFR-2.7.1** Application containerisée (Docker multi-stage builds).
-**NFR-2.7.2** docker-compose.yml pour environnement local complet (app + postgres).
-**NFR-2.7.3** Déploiement via Coolify sur VPS, domaine HTTPS.
-**NFR-2.7.4** Variables d'environnement documentées dans `.env.example`.
-**NFR-2.7.5** Healthcheck endpoint `/health` (backend).
-**NFR-2.7.6** Logs structurés (JSON) redirigés vers stdout.
+**NFR-2.7.1** ✅ **DONE in 9d959d5** — Dockerfiles multi-stage api + web.
+**NFR-2.7.2** ✅ **DONE in 66090dd** — `docker-compose.yml` dev.
+**NFR-2.7.3** ✅ **DONE in 9d959d5** — Coolify sur Hetzner + HTTPS Traefik/Let's Encrypt.
+**NFR-2.7.4** ✅ — `.env.production.example` versionné.
+**NFR-2.7.5** ✅ **DONE in e9a35e1** — `/api/v1/health` avec check DB.
+**NFR-2.7.6** ✅ — Pino JSON stdout.
 
 ### 2.8 Documentation
 
-**NFR-2.8.1** README.md racine : pitch, stack, architecture, quickstart, choix techniques, roadmap v2.
-**NFR-2.8.2** Docs internes sous `docs/` (ce présent ensemble).
-**NFR-2.8.3** JSDoc / TSDoc sur les fonctions publiques des services.
-**NFR-2.8.4** Diagrammes Mermaid pour les flux principaux (ingestion, auth).
+**NFR-2.8.1** 🚧 — README à reviser en Temps 4 (actuellement pitch basique + badge CI).
+**NFR-2.8.2** ✅ — Docs `docs/` étoffées : context (4), product (2), architecture (4 + 7 ADR), ui (1), workflow (1), runbooks (1).
+**NFR-2.8.3** ⏭ **DEFERRED** — JSDoc formel. Privilégié commentaires "why non-obvious" inline.
+**NFR-2.8.4** ⏭ **DEFERRED** — Mermaid pour flux. Candidat pour Temps 4.
 
-## 3. User stories (décomposition initiale)
+## 3. User stories (livrées vs backlog)
 
-> Ces user stories seront raffinées et tickétisées lors du sprint planning au J1 fin de journée.
+### 3.1 Epics terminées (scope candidature)
 
-### Epic 1 — Setup et fondations
+#### Epic 1 — Setup et fondations ✅ **DONE (Sprint 1)**
 
-- **US-1.1** Initialiser le monorepo (apps/web, apps/api, packages/shared)
-- **US-1.2** Setup Docker compose (web + api + postgres)
-- **US-1.3** Setup Prisma avec schéma initial + migrations
-- **US-1.4** Seed de données de démo (4-6 stations + 90 jours de mesures)
-- **US-1.5** Setup CI GitHub Actions (lint + test + build)
+- **US-1.1** ✅ Monorepo pnpm workspace + apps/web + apps/api + packages/shared — commit `5f3593b`
+- **US-1.2** ✅ Docker compose dev — `66090dd`
+- **US-1.3** ✅ Prisma schema + 10 models + migration init + /health — `e9a35e1`
+- **US-1.4** ✅ Seed idempotent (7 stations, glaciers, captages) — `94d6038` + `1ca23c9`
+- **US-1.5** ✅ CI GitHub Actions — `ce73196`
+- **US-1.6** ✅ Déploiement Coolify + HTTPS — `9d959d5`
 
-### Epic 2 — Ingestion OFEV
+#### Epic 2 — Ingestion LINDAS (pivot ADR-007) ✅ **DONE (Sprint 2)**
 
-- **US-2.1** Discovery : script de listage des stations OFEV pertinentes
-- **US-2.2** Service de fetch + parsing XML du flux OFEV
-- **US-2.3** Validation Zod des mesures parsées
-- **US-2.4** Upsert idempotent via Prisma
-- **US-2.5** Scheduling cron 10 minutes
-- **US-2.6** Détection d'anomalies statistiques
-- **US-2.7** Création d'alertes sur seuil dépassé
+- **US-2.1** ✅ Discovery LINDAS + cron + idempotent upsert — `733c8c3` + `df82f87` + `1fe5d36` + `10609b9`
+- **US-2.2** ❌ Fetch XML OFEV — remplacée par SPARQL LINDAS (pivot ADR-007)
+- **US-2.3 → US-2.4** ✅ Validation Zod + upsert Prisma — `1fe5d36`
+- **US-2.5** ✅ Cron 10 min (configurable) — `10609b9`
+- **US-2.6** ⏭ Détection d'anomalies — DEFERRED
+- **US-2.7** ⏭ Création d'alertes — DEFERRED
 
-### Epic 3 — API Fastify
+#### Epic 3 — API Fastify 🚧 **PARTIEL (Sprint 2)**
 
-- **US-3.1** GET /stations (liste)
-- **US-3.2** GET /stations/:id (détail)
-- **US-3.3** GET /stations/:id/measurements (série temporelle paramétrable)
-- **US-3.4** GET /alerts (liste + filtres)
-- **US-3.5** POST /auth/login (JWT)
-- **US-3.6** PUT /stations/:id/thresholds (protégé admin)
-- **US-3.7** Sécurité transverse : helmet, CORS, rate limit
-- **US-3.8** Healthcheck /health
+- **US-3.1** ✅ `GET /stations` — `d6e5569`
+- **US-3.2** ❌ `GET /stations/:id` détail complet — non implémenté, le drawer consomme `/stations` (liste) + cache client, suffisant pour v1
+- **US-3.3** ✅ `GET /stations/:id/measurements` — `d6e5569`
+- **US-3.4** ❌ `GET /alerts` — CANCELLED (épopée alertes deferred)
+- **US-3.5 → US-3.6** ❌ `POST /auth/login` + `PUT /thresholds` — CANCELLED (admin)
+- **US-3.7** ✅ (partiel) — CORS (`c0ef094`), Helmet/rate-limit DEFERRED
+- **US-3.8** ✅ `/health` — `e9a35e1` ; `/status` observabilité bonus — `755b3fb`
 
-### Epic 4 — Front-end Vue 3
+#### Epic 4 — Front-end Vue 3 🚧 **IN PROGRESS (Sprint 3 — Temps 2 en cours)**
 
-- **US-4.1** Layout global + navigation + footer (attribution OFEV)
-- **US-4.2** Design system : tokens Tailwind + palette + typo
-- **US-4.3** Atomes ABEM : Button, Badge, Input, Select, Icon, Spinner, StatusDot
-- **US-4.4** Molécules : StationCard, AlertBanner, ThresholdBar, StatMetric
-- **US-4.5** Organismes : StationList, AlertPanel, ComparisonPicker
-- **US-4.6** Page d'accueil avec carte Leaflet + markers
-- **US-4.7** Page station avec chart D3
-- **US-4.8** Page comparaison multi-stations
-- **US-4.9** Page alertes
-- **US-4.10** Page admin seuils (protégée)
-- **US-4.11** États de chargement / erreur / vide
-- **US-4.12** Responsive + a11y
+- **US-4.1 → US-4.2** ✅ Layout + design tokens — `7145e14` + `400f427`
+- **US-4.3** ✅ Atomes ABEM (AIcon, ABadge, AButton, etc.) — progressivement depuis `7145e14`
+- **US-4.4 → US-4.5** ✅ Molécules + organismes landing — `400f427` + `30ccf57` + `f00833f`
+- **US-4.6** ✅ Carte Leaflet avec markers — `47dabed`
+- **US-4.7** ✅ Drawer + chart D3 24 h (remplace "page station") — `044a749`
+- **US-4.8** ❌ Page comparaison multi-stations — CANCELLED (scope candidature)
+- **US-4.9** ❌ Page alertes — CANCELLED
+- **US-4.10** ❌ Page admin seuils — CANCELLED
+- **US-4.11** 🚧 États loading/error/empty — câblés sur hero (T2-C2), map (T2-C3), drawer (T2-C4) ; reste KeyMetrics (T2-C5)
+- **US-4.12** 🚧 Responsive + a11y — audit formel en Temps 4
 
-### Epic 5 — Tests et qualité
+#### Epic 5 — Tests et qualité 🚧
 
-- **US-5.1** Tests unitaires logique métier
-- **US-5.2** Tests composants Vue
-- **US-5.3** Test E2E Playwright happy path
-- **US-5.4** Audit Lighthouse et corrections
+- **US-5.1** ✅ Tests unitaires logique métier (70 API + 49 web)
+- **US-5.2** ✅ (partiel) Tests composants Vue
+- **US-5.3** ⏭ E2E Playwright — DEFERRED
+- **US-5.4** ⏭ Audit Lighthouse formel — Temps 4
 
-### Epic 6 — Déploiement et docs
+#### Epic 6 — Déploiement et docs ✅ / 🚧
 
-- **US-6.1** Dockerfile multi-stage web + api
-- **US-6.2** Deploy Coolify + domaine + HTTPS
-- **US-6.3** README final avec diagrammes
-- **US-6.4** Smoke tests post-deploy
+- **US-6.1** ✅ Dockerfiles multi-stage — `9d959d5`
+- **US-6.2** ✅ Deploy Coolify + HTTPS — `9d959d5`
+- **US-6.3** 🚧 README final — Temps 4
+- **US-6.4** ✅ Smoke tests post-deploy — validés 2026-04-20
+
+### 3.2 Décisions de recentrage (non prévues au PRD initial)
+
+Les user stories suivantes ont été ajoutées ou redéfinies en cours de sprint pour adapter le livrable à la réalité du scope candidature :
+
+- **Single-page scrollable plutôt que multi-pages** : pas de `/stations/:id`, `/compare`, `/alerts`. La landing page fait tout le job de mise en scène. **Motivation** : densité d'impression recruteur en < 30 s de lecture > dispersion multi-pages.
+- **RESEARCH Borgne comme parti-pris narratif** : les 3 stations non-BAFU sont affichées explicitement en différenciation, ce qui permet de raconter "le réseau fédéral s'arrête ici, voici ce qui vit au-delà dans l'espace CREALP". Non prévu au PRD initial, émergé de la discovery ADR-007. Couvert par `OResearchZonesSection`.
+- **Section narrative "Pourquoi LINDAS"** : explique le pivot ADR-007 à un recruteur. Couvert par `OWhyLindasSection`.
+- **Observabilité `/status` + badge hero** : dépasse NFR-2.7.5 (juste `/health`). Couvre IngestionRun visibilité, dernière sync, count de mesures. Couvert par US-T2-C2 (`dae6a2a`).

@@ -95,40 +95,121 @@ alpimonitor/
 - Je traverse : route → service → domain → repository (Prisma)
 - Je sérialise toujours en DTO explicite (jamais d'entité Prisma brute)
 
-## État courant du sprint
+## État courant du projet
 
 > **À mettre à jour à la fin de chaque session Claude Code.**
 
-**Sprint** : 1 (J1-J3 — fondations + deploy + CI)
-**Date dernière mise à jour** : 2026-04-20
-**Statut** : US-1.1 → US-1.6 livrées. Production live sur Coolify (https://alpimonitor.fr, https://api.alpimonitor.fr). Seed de contexte (stations Borgne, glaciers, captages) idempotent en place. CI GitHub Actions (lint + typecheck + tests + build) sur push main + PR.
-**Prochaine tâche** : US-2.1 — Ingestion OFEV (fetch XML `hydroweb.xml` + discovery stations + upsert `Measurement` + cron 10 min + réconciliation `ofevCode` des stations TBD).
-**Blocages** : aucun
+**Date dernière mise à jour** : 2026-04-21
+**Deadline candidature CREALP** : 2026-04-30
+**Production live** : https://alpimonitor.fr (SPA) + https://api.alpimonitor.fr (API). Auto-deploy sur push `main` via Coolify + GitHub App `sodigitaljeremy`.
+
+### Sprints livrés
+
+- **Sprint 1 (J1-J3, 2026-04-18 → 2026-04-20)** — Fondations + deploy + CI. Monorepo pnpm, Docker compose dev, Prisma schema + migration init, seed idempotent (7 stations, 2 glaciers, 2 captages), CI GitHub Actions (lint + typecheck + tests + build), Dockerfiles multi-stage, déploiement Coolify sur VPS Hetzner derrière Traefik + Let's Encrypt.
+- **Sprint 2 (J4-J7, 2026-04-20 → 2026-04-21)** — Backend ingestion + API + incident prod. Pivot LINDAS SPARQL (ADR-007, flux XML OFEV mort découvert à la discovery). Plugin cron 10 min, parser SPARQL, upsert Prisma idempotent. Endpoints `/stations`, `/stations/:id/measurements`, `/status`, `/health`. Incident 2026-04-21 (DB prod vidée, cause undetermined) → résolution défensive via `entrypoint.sh` + seed-on-boot, post-mortem `docs/runbooks/incident-2026-04-21.md`.
+- **Sprint 3 — Temps 1 (J8-J10)** — Scaffold landing page. 6 sections (Hero / Map / KeyMetrics / WhyLindas / ResearchZones / Footer) en stub, design tokens, atomes ABEM, responsive 375 px validé, i18n vue-i18n (FR only).
+- **Sprint 3 — Temps 2 (J11-J12, EN COURS)** — Câblage données live. T2-C1 CORS + useApi composable. T2-C2 status badge wired sur `/status`. T2-C3 carte Leaflet avec 7 markers LIVE/RESEARCH. T2-C4 drawer + chart D3 24 h. **T2-C5 à venir** : KeyMetrics live + polish responsive.
+- **Sprint 3 — Temps 3-4 (J13)** — Hors scope T2, à planifier : audit Lighthouse + a11y axe-core, README final, éventuellement OG image + screenshots. Date butoir 2026-04-30.
+
+### Stack concrète (état shipped)
+
+| Couche | Techno | Notes |
+|---|---|---|
+| Frontend | Vue 3 (Composition API), Vite 6, TypeScript strict | SPA single-page scrollable |
+| State | **Pinia** (setup syntax) | `useStatusStore`, `useStationsStore` |
+| i18n | **vue-i18n** | `fr.json` uniquement |
+| HTTP | **fetch natif** via `useApi` composable | pas de vue-query / axios / tanstack-query |
+| Styling | Tailwind + ABEM (ADR-002) | `@apply` dans `<style scoped>` |
+| Cartographie | Leaflet 1.9 + tuiles **OSM** (pas swisstopo, cf. ADR-005 drift) | ResizeObserver + cleanup `map.remove()` |
+| Charts | D3 modules (scale, shape, axis, time-format) | un seul composant `OHydroChart.vue` + `chart-model.ts` pur |
+| Backend | Fastify 5 | monolithe API + cron (ADR-003) |
+| ORM | Prisma 5 + PostgreSQL 16 | singleton via plugin, migrations versionnées |
+| Validation | Zod dans `packages/shared/schemas/` | runtime + compile-time via `z.infer` |
+| Ingestion | **LINDAS SPARQL** via `undici` fetch | cron interne 10 min, idempotent upsert |
+| Observabilité | `pino` JSON stdout + `/health` + `/status` | `IngestionRun` persiste chaque tick |
+| CI | GitHub Actions, Node 20, pnpm 10.33.0 | lint + typecheck + test + build sur push main + PR |
+| Déploiement | Coolify (auto-deploy push main) + Traefik + Let's Encrypt | VPS Hetzner `95.216.196.69` |
+| Tests | Vitest + @vue/test-utils + Testing Library | 70 API + 49 web au 2026-04-21 |
 
 ### Historique des sessions
 
-- **2026-04-18** : Génération du context pack (business, domain, data-sources, brief, PRD, architecture overview, data model, API contracts, 6 ADR, design system, conventions).
-- **2026-04-18 (v2)** : Ajout de `docs/context/internal-projects.md` (synthèse rapports d'activité CREALP 2022-2024). Enrichissement ciblé de `business.md` (structure équipe IT, chiffres CA, Frédéric Etter).
-- **2026-04-20** : US-1.3 (Prisma schema + 10 models + migration init + /health check DB), US-1.6 (Dockerfiles prod api/web + docker-compose.prod.yml + nginx SPA + env template). Déploiement Coolify sur VPS Hetzner : GitHub App `sodigitaljeremy` branchée, ressource `alpimonitor-prod` créée, 3 services (postgres + api + web) live derrière Traefik + Let's Encrypt sur alpimonitor.fr / www / api. Push `main` = auto-deploy. Smoke test externe : /api/v1/health renvoie `{status:"ok",database:"ok"}`, SPA Vite servie, 307 HTTP→HTTPS OK.
-- **2026-04-20 (v2)** : US-1.4 (seed idempotent : catchment Borgne, 3 stations dont Bramois avec `ofevCode=2011` confirmé + 2 TBD, sensors DISCHARGE/WATER_LEVEL, thresholds ABOVE, 2 glaciers Ferpècle/Mont Miné, 2 captages Grande Dixence). US-1.5 (workflow `.github/workflows/ci.yml` Node 20 + pnpm 10.33.0 : install → prisma generate → format:check → lint → typecheck → test → build, avec concurrency cancel-in-progress et cache pnpm store). Badge CI dans le README.
+- **2026-04-18** : Context pack (business, domain, data-sources, brief, PRD, architecture overview, data model, API contracts, 6 ADR, design system, conventions). Ajout `internal-projects.md` (synthèse rapports CREALP 2022-2024).
+- **2026-04-20** : US-1.3 Prisma + /health. US-1.6 Dockerfiles + déploiement Coolify live. US-1.4 seed idempotent. US-1.5 CI workflow + badge.
+- **2026-04-20 (v2)** : Discovery LINDAS → ADR-007. Ingestion SPARQL + cron + `Station.dataSource` + `IngestionRun`. Endpoints `/stations`, `/stations/:id/measurements`, `/status`.
+- **2026-04-21** : Incident DB vidée + post-mortem + défense entrypoint.sh. Sprint 3 démarré : scaffold landing, design tokens, atomes ABEM, refactor `MStationCard`, purge CSS brute, responsive 375 px, design-system.md réconcilié.
+- **2026-04-21 (Temps 2)** : T2-C1 CORS + useApi (`c0ef094`). T2-C2 status badge live (`dae6a2a`). T2-C3 Leaflet map (`47dabed`). T2-C4 drawer + chart D3 24 h (`044a749`).
 
-## Non-goals rappelés
+## Non-scope candidature (2026-04-30)
 
-Ne **jamais** implémenter les éléments suivants sans discussion explicite avec l'auteur humain :
+Ces features font partie du PRD initial mais sont **intentionnellement hors du livrable candidature**. Ne pas les implémenter sans validation explicite — leur absence est un parti-pris assumé.
 
-- Python ou FastAPI (stack TypeScript uniquement)
-- IA / ML / LLM embarqué
-- Vue Flow
-- Storybook complet (sauf marge fin de sprint)
-- Module 3D / photogrammétrie
-- Authentification complexe (OAuth, multi-tenant)
-- i18n multi-langue
-- Microservices
+- **Multi-pages** : pas de `/stations/:id`, `/compare`, `/alerts`. Le livrable est une **single-page scrollable** pour densité d'impression recruteur < 30 s.
+- **Admin UI** : pas de `/admin/thresholds`, pas d'édition de seuils, pas de formulaires protégés.
+- **Authentification** : pas de `POST /auth/login`, pas de JWT, pas de bcrypt, pas de cookies. Tout est read-only public.
+- **Alertes** : pas de CRUD Alert, pas de détection d'anomalies (moyenne mobile ± 2σ), pas de panneau d'alertes, pas de notifications.
+- **Export CSV** et **brush/zoom D3** : conservés backlog v2.
+- **E2E Playwright** + **Lighthouse formel** : reportés Temps 4 si budget.
+- **Python / FastAPI / ML / LLM embarqué** : stack TypeScript uniquement (ADR-001).
+- **Vue Flow**, **Module 3D / photogrammétrie** (territoire 3DGEOWEB).
+- **Multi-langue** (FR uniquement), **OAuth / multi-tenant**, **microservices**.
+- **Helmet + rate limiting** : non wired (Fastify défauts), à faire si production réelle post-candidature.
+- **Sources alt** : pas de MétéoSuisse SwissMetNet, pas de GLAMOS temps-réel, pas de scraping. Seul LINDAS est consommé (ADR-007).
+
+Un recruteur qui demande "pourquoi X manque" doit pouvoir être renvoyé vers `docs/product/prd.md` section "État du périmètre" pour justification.
+
+## Outils et commandes fréquentes
+
+### Dev local
+
+```bash
+# Monorepo root
+pnpm install                              # une seule fois
+docker compose up -d postgres             # DB dev sur 5432
+pnpm --filter @alpimonitor/api prisma:migrate   # applique migrations dev
+pnpm --filter @alpimonitor/api prisma:seed      # seed idempotent
+
+# Servir
+pnpm --filter @alpimonitor/api dev        # API sur :3000 (+ cron ingestion si INGESTION_ENABLED)
+pnpm --filter @alpimonitor/web dev        # SPA sur :5173
+```
+
+### Gates de qualité (à passer avant chaque commit)
+
+```bash
+pnpm format:check
+pnpm lint
+pnpm --filter @alpimonitor/web typecheck
+pnpm --filter @alpimonitor/api typecheck
+pnpm --filter @alpimonitor/web test
+pnpm --filter @alpimonitor/api test
+pnpm --filter @alpimonitor/web build
+pnpm --filter @alpimonitor/api build
+```
+
+### Production / Coolify
+
+- Auto-deploy sur `git push origin main` via GitHub App `sodigitaljeremy`.
+- Smoke test : `curl https://api.alpimonitor.fr/api/v1/health` doit retourner `{"status":"ok","database":"ok"}`.
+- Observabilité : `curl https://api.alpimonitor.fr/api/v1/status | jq` expose `ingestion.lastRun`.
+- SSH VPS : `ssh root@95.216.196.69` (cohabitation avec `exploreiot`).
+- Logs : via UI Coolify (ressource `alpimonitor-prod`, service `api`).
+- Incident check DB : `docker exec <pg-container> psql -U alpimonitor -d alpimonitor -c 'SELECT COUNT(*) FROM "Station"'` devrait retourner 7.
+
+### Où chercher quoi
+
+- **Types partagés front/back** : `packages/shared/src/`
+- **Schémas Zod** : `packages/shared/src/schemas/`
+- **Ingestion LINDAS** : `apps/api/src/ingestion/lindas/`
+- **Services API** : `apps/api/src/services/`
+- **Pinia stores** : `apps/web/src/stores/`
+- **Atomes/molécules/organismes Vue** : `apps/web/src/components/{atoms,molecules,organisms}/`
+- **Runbooks / post-mortems** : `docs/runbooks/`
 
 ## Contacts et ressources
 
 - Annonce CREALP : https://www.crealp.ch/wp-content/uploads/2026/04/Developpeur-se-FrontEnd_Annonce.pdf
 - Contact recrutement : Frédéric Etter — +41 27 607 11 93
 - 3DGEOWEB (produit existant à ne pas concurrencer) : https://www.3dgeoweb.crealp.ch
-- OFEV données : https://www.hydrodaten.admin.ch
-- Swisstopo tuiles : https://wmts.geo.admin.ch
+- OFEV / LINDAS : https://lindas.admin.ch/query (endpoint SPARQL), graph `<https://lindas.admin.ch/foen/hydro>`
+- Référence incident : `docs/runbooks/incident-2026-04-21.md`
+- Snapshot projet 30 secondes : `docs/STATUS.md`

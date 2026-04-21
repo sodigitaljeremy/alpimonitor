@@ -1,7 +1,8 @@
 # ADR-003 — Monolithe Fastify plutôt que microservices
 
 **Date** : 2026-04-18
-**Statut** : Acceptée
+**Statut** : Acceptée — implémentée
+**Implémentation** : `10609b9` (plugin `ingestion` intégré au serveur Fastify, tick wrappé dans try/catch, skip d'overlap, désactivable par `INGESTION_ENABLED=false` pour les tests). Monolithe vérifié par `apps/api/src/index.ts` + `apps/api/src/plugins/ingestion.ts`, déployé en un seul service Coolify (`alpimonitor-prod` / service `api`).
 
 ## Contexte
 

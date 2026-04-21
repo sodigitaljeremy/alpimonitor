@@ -1,7 +1,8 @@
 # ADR-006 — D3 en vanilla plutôt que via un wrapper Vue
 
 **Date** : 2026-04-18
-**Statut** : Acceptée
+**Statut** : Acceptée — implémentée en version simplifiée (voir § Drift)
+**Implémentation** : `df4754c` (install d3 modules), `044a749` (OHydroChart + chart-model).
 
 ## Contexte
 
@@ -93,6 +94,16 @@ Chaque chart doit s'accompagner :
 - D'un **titre explicite** dans `<title>` du `<svg>`
 - D'un `<desc>` résumant les valeurs principales
 - D'un **tableau de données** alternatif accessible via un toggle (par défaut visuellement caché, révélé par `sr-only` ou bouton "Voir les données")
+
+## Drift d'implémentation (audit 2026-04-21)
+
+L'architecture prévue (orchestrateur `TimeSeriesChart.vue` + sous-composants `ChartAxis`, `ChartBrush`, `ChartLine`) n'a pas été matérialisée telle quelle. L'implémentation T2-C4 regroupe tout dans un unique composant `OHydroChart.vue` (axes + line + area + grid + hover tooltip) avec un module pur `chart-model.ts` qui extrait `computeYDomain` et `findNearestPointByPx`.
+
+**Motivation** : le scope candidature ne contient qu'**un seul type de chart** (discharge 24 h). Créer 4 composants pour un seul usage viole YAGNI ; le module pur `chart-model.ts` couvre le besoin de testabilité unitaire (7 tests). Les sous-composants `ChartAxis/Brush/Line` restent pertinents si AlpiMonitor ajoute d'autres charts (comparaison, multi-paramètres) — c'est alors que l'extraction se justifiera. Pour 1 chart, elle est prématurée.
+
+**Principe respecté** : la règle "Vue pour le rendu déclaratif, D3 pour scales/formatters" est tenue. Les `<path>` de line/area sont générés par `d3-shape` mais rendus via `:d` dans le template Vue ; les scales (`scaleTime`, `scaleLinear`) vivent dans `computed`. Aucune `d3.select` n'attaque les éléments rendus par Vue.
+
+**Non-implémenté** (renvoyé au backlog) : brush, zoom, tableau alternatif a11y. Ces items sont couverts par les entrées DEFERRED du PRD.
 
 ## Alternatives écartées
 

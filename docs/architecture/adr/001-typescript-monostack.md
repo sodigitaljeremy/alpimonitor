@@ -1,7 +1,8 @@
 # ADR-001 — Stack TypeScript unique
 
 **Date** : 2026-04-18
-**Statut** : Acceptée
+**Statut** : Acceptée — implémentée
+**Implémentation** : `5f3593b` (monorepo pnpm init), `e9a35e1` (Prisma + Fastify), confirmé par l'ensemble de la codebase.
 
 ## Contexte
 

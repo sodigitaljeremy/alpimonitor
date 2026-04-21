@@ -1,7 +1,8 @@
 # ADR-007 — Source de données hydrologiques : LINDAS SPARQL
 
 **Date** : 2026-04-20
-**Statut** : Acceptée
+**Statut** : Acceptée — implémentée
+**Implémentation** : `733c8c3` (rédaction ADR), `df82f87` (`Station.dataSource` + `IngestionRun`), `1fe5d36` (discovery SPARQL + parser + seed idempotent), `10609b9` (cron 10 min + plugin ingestion). Observabilité via `/api/v1/status` (`755b3fb`) qui expose `ingestion.lastRun`.
 
 ## Contexte
 
