@@ -20,6 +20,7 @@
   },
   "dependencies": {
     "@alpimonitor/shared": "workspace:*",
+    "@fastify/cors": "^11.2.0",
     "@prisma/client": "^6.19.2",
     "fastify": "^5.1.0",
     "fastify-plugin": "^5.1.0",
