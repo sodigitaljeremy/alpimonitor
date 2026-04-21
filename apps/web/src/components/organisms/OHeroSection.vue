@@ -53,7 +53,7 @@ const { t } = useI18n();
 }
 
 .o-hero-section__status {
-  @apply flex justify-end;
+  @apply flex justify-start md:justify-end;
 }
 
 .o-hero-section__content {

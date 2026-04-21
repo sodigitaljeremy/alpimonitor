@@ -73,7 +73,7 @@ const { t } = useI18n();
 }
 
 .o-map-section__legend {
-  @apply absolute right-4 top-4 flex flex-col gap-2 rounded-md border border-slate-alpi/20 bg-white/95 px-4 py-3 text-sm shadow-card backdrop-blur;
+  @apply absolute bottom-4 left-4 flex flex-col gap-2 rounded-md border border-slate-alpi/20 bg-white/95 px-4 py-3 text-sm shadow-card backdrop-blur sm:bottom-auto sm:left-auto sm:right-4 sm:top-4;
 }
 
 .o-map-section__legend-title {
