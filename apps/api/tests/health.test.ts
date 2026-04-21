@@ -12,6 +12,9 @@ vi.mock('@prisma/client', () => ({
   },
 }));
 
+// Keep the cron out of the /health test — it would fire a real HTTP call.
+process.env.INGESTION_ENABLED = 'false';
+
 const { buildServer } = await import('../src/server.js');
 
 describe('GET /api/v1/health', () => {

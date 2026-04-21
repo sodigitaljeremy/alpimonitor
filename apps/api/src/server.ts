@@ -1,5 +1,6 @@
 import Fastify, { type FastifyInstance } from 'fastify';
 
+import { ingestionPlugin } from './plugins/ingestion.js';
 import { prismaPlugin } from './plugins/prisma.js';
 import { healthRoutes } from './routes/health.js';
 
@@ -11,6 +12,7 @@ export async function buildServer(): Promise<FastifyInstance> {
   });
 
   await server.register(prismaPlugin);
+  await server.register(ingestionPlugin);
   await server.register(healthRoutes, { prefix: '/api/v1' });
 
   return server;

@@ -39,8 +39,15 @@ services:
       LOG_LEVEL: ${LOG_LEVEL:-info}
       HOST: 0.0.0.0
       PORT: 3000
+      # LINDAS ingestion cron — see ADR-007 and src/plugins/ingestion.ts.
+      # Set INGESTION_ENABLED=false to disable the cron (e.g. one-off migrations).
+      INGESTION_ENABLED: ${INGESTION_ENABLED:-true}
+      INGESTION_SCHEDULE: ${INGESTION_SCHEDULE:-*/10 * * * *}
+      LINDAS_ARCHIVE_DIR: /app/var/lindas-archive
     expose:
       - '3000'
+    volumes:
+      - alpimonitor-lindas-archive:/app/var/lindas-archive
     networks:
       - alpimonitor-net
     depends_on:
@@ -64,6 +71,7 @@ services:
 
 volumes:
   alpimonitor-pgdata:
+  alpimonitor-lindas-archive:
 
 networks:
   alpimonitor-net:
