@@ -1,4 +1,4 @@
-import type { StationDTO } from '@alpimonitor/shared';
+import type { StationDTO, StationMeasurementsDTO } from '@alpimonitor/shared';
 import { createPinia, setActivePinia } from 'pinia';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -27,6 +27,19 @@ function station(partial: Partial<StationDTO> & { id: string }): StationDTO {
     dataSource: partial.dataSource ?? 'LIVE',
     latestMeasurements: partial.latestMeasurements ?? [],
     activeAlertsCount: partial.activeAlertsCount ?? 0,
+  };
+}
+
+function measurementsDto(
+  stationId: string,
+  points: Array<{ t: string; v: number }>
+): StationMeasurementsDTO {
+  return {
+    stationId,
+    from: '2026-04-20T12:00:00.000Z',
+    to: '2026-04-21T12:00:00.000Z',
+    aggregate: 'raw',
+    series: [{ parameter: 'DISCHARGE', unit: 'm³/s', points }],
   };
 }
 
@@ -104,5 +117,116 @@ describe('useStationsStore', () => {
     await store.fetchStations();
     expect(store.error).toBeNull();
     expect(store.stations).toHaveLength(1);
+  });
+
+  describe('selection', () => {
+    it('selectStation sets selectedStationId and selectedStation derives from items', async () => {
+      fetchMock.mockResolvedValueOnce(
+        ok({ data: [station({ id: 'a', name: 'Brig' }), station({ id: 'b', name: 'Sion' })] })
+      );
+      const store = useStationsStore();
+      await store.fetchStations();
+
+      store.selectStation('b');
+      expect(store.selectedStationId).toBe('b');
+      expect(store.selectedStation?.name).toBe('Sion');
+    });
+
+    it('selectedStation is null when id is unknown (e.g. race with an empty list)', () => {
+      const store = useStationsStore();
+      store.selectStation('ghost');
+      expect(store.selectedStationId).toBe('ghost');
+      expect(store.selectedStation).toBeNull();
+    });
+
+    it('clearSelection resets selectedStationId to null', () => {
+      const store = useStationsStore();
+      store.selectStation('a');
+      store.clearSelection();
+      expect(store.selectedStationId).toBeNull();
+      expect(store.selectedStation).toBeNull();
+    });
+  });
+
+  describe('fetchMeasurements', () => {
+    it('populates the per-station cache on success', async () => {
+      fetchMock.mockResolvedValueOnce(
+        ok({ data: measurementsDto('s1', [{ t: '2026-04-21T11:00:00.000Z', v: 42 }]) })
+      );
+
+      const store = useStationsStore();
+      await store.fetchMeasurements('s1');
+
+      expect(store.measurementsByStation.s1).toBeDefined();
+      expect(store.measurementsByStation.s1).toHaveLength(1);
+      expect(store.measurementsByStation.s1[0].parameter).toBe('DISCHARGE');
+      expect(store.measurementsByStation.s1[0].points).toEqual([
+        { t: '2026-04-21T11:00:00.000Z', v: 42 },
+      ]);
+      expect(store.measurementsErrorByStation.s1).toBeNull();
+      expect(store.measurementsLoadingByStation.s1).toBe(false);
+    });
+
+    it('skips the network on a cache hit unless force is true', async () => {
+      fetchMock.mockResolvedValueOnce(
+        ok({ data: measurementsDto('s1', [{ t: '2026-04-21T11:00:00.000Z', v: 10 }]) })
+      );
+
+      const store = useStationsStore();
+      await store.fetchMeasurements('s1');
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+
+      await store.fetchMeasurements('s1');
+      expect(fetchMock).toHaveBeenCalledTimes(1); // cache hit, no second call
+
+      fetchMock.mockResolvedValueOnce(
+        ok({ data: measurementsDto('s1', [{ t: '2026-04-21T11:30:00.000Z', v: 11 }]) })
+      );
+      await store.fetchMeasurements('s1', { force: true });
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+      expect(store.measurementsByStation.s1[0].points).toEqual([
+        { t: '2026-04-21T11:30:00.000Z', v: 11 },
+      ]);
+    });
+
+    it('caches an empty series as a valid fetched state (no re-fetch on next open)', async () => {
+      fetchMock.mockResolvedValueOnce(ok({ data: measurementsDto('s1', []) }));
+
+      const store = useStationsStore();
+      await store.fetchMeasurements('s1');
+      await store.fetchMeasurements('s1');
+
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(store.measurementsByStation.s1[0].points).toEqual([]);
+    });
+
+    it('captures HTTP errors per station without polluting the cache', async () => {
+      fetchMock.mockResolvedValueOnce(httpError(500, 'Internal Server Error'));
+
+      const store = useStationsStore();
+      await store.fetchMeasurements('s1');
+
+      expect(store.measurementsErrorByStation.s1).toBeInstanceOf(Error);
+      expect(store.measurementsErrorByStation.s1?.message).toContain('500');
+      expect(store.measurementsByStation.s1).toBeUndefined();
+      expect(store.measurementsLoadingByStation.s1).toBe(false);
+    });
+
+    it('queries the /measurements endpoint with parameter=DISCHARGE and a 24h window', async () => {
+      fetchMock.mockResolvedValueOnce(ok({ data: measurementsDto('s1', []) }));
+
+      const store = useStationsStore();
+      await store.fetchMeasurements('s1');
+
+      const call = fetchMock.mock.calls[0];
+      expect(call).toBeDefined();
+      const url = call![0] as string;
+      expect(url).toContain('/stations/s1/measurements');
+      expect(url).toContain('parameter=DISCHARGE');
+      const urlObj = new URL(url, 'http://localhost');
+      const from = new Date(urlObj.searchParams.get('from')!);
+      const to = new Date(urlObj.searchParams.get('to')!);
+      expect(to.getTime() - from.getTime()).toBeCloseTo(24 * 60 * 60 * 1000, -2);
+    });
   });
 });

@@ -34,6 +34,17 @@
       "researchNotice": "Réseau CREALP — non exposé publiquement"
     }
   },
+  "drawer": {
+    "close": "Fermer",
+    "coords": "Coordonnées : {lat}, {lng}",
+    "chartTitle": "Débit sur 24h",
+    "chartAriaLabel": "Courbe de débit sur les dernières 24 heures",
+    "chartLoading": "Chargement des mesures…",
+    "chartEmpty": "Aucune donnée pour les dernières 24h",
+    "chartError": "Impossible de charger les mesures",
+    "chartRetry": "Réessayer",
+    "viewOnHydrodaten": "Voir sur hydrodaten.admin.ch"
+  },
   "keyMetrics": {
     "title": "Chiffres clés",
     "subtitle": "Un aperçu du réseau monitoré en temps réel",

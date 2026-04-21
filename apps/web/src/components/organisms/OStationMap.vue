@@ -4,6 +4,8 @@ import L from 'leaflet';
 import { onMounted, onScopeDispose, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 
+import { useStationsStore } from '@/stores/stations';
+
 import { findLatestDischarge, stationToMarkerOptions } from './station-map-mapping';
 
 import 'leaflet/dist/leaflet.css';
@@ -11,6 +13,7 @@ import 'leaflet/dist/leaflet.css';
 const props = defineProps<{ stations: StationDTO[] }>();
 
 const { t } = useI18n();
+const stationsStore = useStationsStore();
 
 // Rhône valaisan: centered between Brig and Porte du Scex, zoom 10 keeps
 // both the main Rhône corridor and the Val d'Hérens markers in view.
@@ -22,18 +25,12 @@ let map: L.Map | null = null;
 let markersLayer: L.LayerGroup | null = null;
 let resizeObserver: ResizeObserver | null = null;
 
-function buildPopupHtml(station: StationDTO): string {
-  const lines: string[] = [`<strong>${station.name}</strong>`, `<span>${station.riverName}</span>`];
-  if (station.dataSource === 'LIVE') {
-    const discharge = findLatestDischarge(station);
-    lines.push(
-      discharge !== null
-        ? t('map.popup.discharge', { value: discharge.toFixed(2) })
-        : t('map.popup.noMeasurement')
-    );
-  } else {
-    lines.push(t('map.popup.researchNotice'));
-  }
+function buildResearchPopupHtml(station: StationDTO): string {
+  const lines: string[] = [
+    `<strong>${station.name}</strong>`,
+    `<span>${station.riverName}</span>`,
+    t('map.popup.researchNotice'),
+  ];
   return lines.map((line) => `<p class="o-station-map__popup-line">${line}</p>`).join('');
 }
 
@@ -45,7 +42,23 @@ function renderMarkers(stations: StationDTO[]): void {
       [station.latitude, station.longitude],
       stationToMarkerOptions(station)
     );
-    marker.bindPopup(buildPopupHtml(station));
+    if (station.dataSource === 'LIVE') {
+      // LIVE markers open the drawer directly — a popup would be a
+      // dead-end preview of data the drawer's chart already shows in
+      // full. A lightweight tooltip (hover on desktop, ignored on
+      // mobile) keeps the station name visible without that detour.
+      const discharge = findLatestDischarge(station);
+      const tooltip =
+        discharge !== null
+          ? `${station.name} — ${t('map.popup.discharge', { value: discharge.toFixed(2) })}`
+          : station.name;
+      marker.bindTooltip(tooltip, { direction: 'top', offset: [0, -8] });
+      marker.on('click', () => {
+        stationsStore.selectStation(station.id);
+      });
+    } else {
+      marker.bindPopup(buildResearchPopupHtml(station));
+    }
     markersLayer.addLayer(marker);
   }
 }
