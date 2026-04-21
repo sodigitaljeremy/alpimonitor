@@ -69,7 +69,12 @@
       "durationMs": 2340
     },
     "lastSuccessAt": "2026-04-21T10:00:02.340Z",
-    "healthyThresholdMinutes": 30
+    "healthyThresholdMinutes": 30,
+    "today": {
+      "runsCount": 6,
+      "measurementsCreatedSum": 48,
+      "successRate": 1
+    }
   }
 }
 ```
@@ -78,6 +83,7 @@
 - `lastSuccessAt` est `null` si aucun run `SUCCESS` n'existe encore.
 - Le frontend calcule l'état du badge : `now - lastSuccessAt < healthyThresholdMinutes * 60s` → vert, sinon rouge.
 - Le threshold est surchargeable via `INGESTION_HEALTHY_THRESHOLD_MINUTES` côté serveur.
+- `today` agrège les `IngestionRun` depuis **minuit UTC**. Choix délibéré : UTC est stable, ne dépend pas du fuseau serveur, et `today` est une métrique ops/demo, pas un affichage légal. `successRate` ∈ `[0, 1]` ou `null` si `runsCount === 0` — évite d'afficher un « 0 % » trompeur avant le premier tick du cron de la journée.
 - La forme de `ingestion` est volontairement extensible : en v2 elle pourra devenir `{ sources: { LINDAS_HYDRO: {...}, MCH_SWISSMETNET: {...} } }` sans casser les consommateurs actuels si l'on ajoute une clé à côté.
 
 **Response 503** si la DB est inaccessible. Payload identique avec `database.status = "error"` et `ingestion.lastRun = null`.

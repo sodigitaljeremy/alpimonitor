@@ -7,6 +7,11 @@ import type { FastifyInstance } from 'fastify';
 // in src/routes/status.ts): 1st = latest run, 2nd = latest SUCCESS.
 const findFirstQueue: Array<() => Promise<unknown>> = [];
 
+// Same idea for the today-scoped aggregate and SUCCESS count: per-test
+// stubs queued in order.
+const aggregateQueue: Array<() => Promise<unknown>> = [];
+const countQueue: Array<() => Promise<number>> = [];
+
 vi.mock('@prisma/client', () => ({
   PrismaClient: class {
     async $connect(): Promise<void> {}
@@ -18,6 +23,16 @@ vi.mock('@prisma/client', () => ({
       findFirst: async (): Promise<unknown> => {
         const next = findFirstQueue.shift();
         if (!next) throw new Error('no findFirst behaviour queued for this call');
+        return next();
+      },
+      aggregate: async (): Promise<unknown> => {
+        const next = aggregateQueue.shift();
+        if (!next) throw new Error('no aggregate behaviour queued for this call');
+        return next();
+      },
+      count: async (): Promise<number> => {
+        const next = countQueue.shift();
+        if (!next) throw new Error('no count behaviour queued for this call');
         return next();
       },
     };
@@ -36,6 +51,16 @@ function queueFindFirst(latest: unknown, latestSuccess: unknown): void {
   );
 }
 
+function queueToday(
+  aggregate: { _count: { _all: number }; _sum: { measurementsCreatedCount: number | null } },
+  successCount: number
+): void {
+  aggregateQueue.length = 0;
+  countQueue.length = 0;
+  aggregateQueue.push(async () => aggregate);
+  countQueue.push(async () => successCount);
+}
+
 describe('GET /api/v1/status', () => {
   let app: FastifyInstance;
 
@@ -46,6 +71,8 @@ describe('GET /api/v1/status', () => {
   afterEach(async () => {
     await app.close();
     findFirstQueue.length = 0;
+    aggregateQueue.length = 0;
+    countQueue.length = 0;
   });
 
   it('returns the latest run and lastSuccessAt when both are present', async () => {
@@ -64,6 +91,7 @@ describe('GET /api/v1/status', () => {
       },
       { completedAt }
     );
+    queueToday({ _count: { _all: 6 }, _sum: { measurementsCreatedCount: 48 } }, 6);
 
     const res = await app.inject({ method: 'GET', url: '/api/v1/status' });
     expect(res.statusCode).toBe(200);
@@ -75,6 +103,7 @@ describe('GET /api/v1/status', () => {
         lastRun: Record<string, unknown> | null;
         lastSuccessAt: string | null;
         healthyThresholdMinutes: number;
+        today: { runsCount: number; measurementsCreatedSum: number; successRate: number | null };
       };
     };
 
@@ -92,10 +121,52 @@ describe('GET /api/v1/status', () => {
     });
     expect(body.ingestion.lastSuccessAt).toBe('2026-04-21T10:00:02.340Z');
     expect(body.ingestion.healthyThresholdMinutes).toBe(30);
+    expect(body.ingestion.today).toEqual({
+      runsCount: 6,
+      measurementsCreatedSum: 48,
+      successRate: 1,
+    });
+  });
+
+  it('returns successRate as a fraction when some runs failed today', async () => {
+    queueFindFirst(null, null);
+    queueToday({ _count: { _all: 4 }, _sum: { measurementsCreatedCount: 24 } }, 3);
+
+    const res = await app.inject({ method: 'GET', url: '/api/v1/status' });
+    expect(res.statusCode).toBe(200);
+
+    const body = res.json() as {
+      ingestion: {
+        today: { runsCount: number; measurementsCreatedSum: number; successRate: number | null };
+      };
+    };
+    expect(body.ingestion.today.runsCount).toBe(4);
+    expect(body.ingestion.today.measurementsCreatedSum).toBe(24);
+    expect(body.ingestion.today.successRate).toBeCloseTo(0.75);
+  });
+
+  it('returns successRate=null and sum=0 when no run has happened yet today', async () => {
+    queueFindFirst(null, null);
+    queueToday({ _count: { _all: 0 }, _sum: { measurementsCreatedCount: null } }, 0);
+
+    const res = await app.inject({ method: 'GET', url: '/api/v1/status' });
+    expect(res.statusCode).toBe(200);
+
+    const body = res.json() as {
+      ingestion: {
+        today: { runsCount: number; measurementsCreatedSum: number; successRate: number | null };
+      };
+    };
+    expect(body.ingestion.today).toEqual({
+      runsCount: 0,
+      measurementsCreatedSum: 0,
+      successRate: null,
+    });
   });
 
   it('returns null lastRun / lastSuccessAt when the IngestionRun table is empty', async () => {
     queueFindFirst(null, null);
+    queueToday({ _count: { _all: 0 }, _sum: { measurementsCreatedCount: null } }, 0);
 
     const res = await app.inject({ method: 'GET', url: '/api/v1/status' });
     expect(res.statusCode).toBe(200);
@@ -120,6 +191,7 @@ describe('GET /api/v1/status', () => {
       },
       null
     );
+    queueToday({ _count: { _all: 1 }, _sum: { measurementsCreatedCount: 0 } }, 0);
 
     const res = await app.inject({ method: 'GET', url: '/api/v1/status' });
     expect(res.statusCode).toBe(200);
@@ -138,17 +210,32 @@ describe('GET /api/v1/status', () => {
       },
       async () => null
     );
+    aggregateQueue.push(async () => ({
+      _count: { _all: 0 },
+      _sum: { measurementsCreatedCount: null },
+    }));
+    countQueue.push(async () => 0);
 
     const res = await app.inject({ method: 'GET', url: '/api/v1/status' });
     expect(res.statusCode).toBe(503);
     const body = res.json() as {
       api: { status: string };
       database: { status: string };
-      ingestion: { lastRun: null; lastSuccessAt: null };
+      ingestion: {
+        lastRun: null;
+        lastSuccessAt: null;
+        today: { runsCount: number; measurementsCreatedSum: number; successRate: number | null };
+      };
     };
     expect(body.api.status).toBe('ok');
     expect(body.database.status).toBe('error');
     expect(body.ingestion.lastRun).toBeNull();
     expect(body.ingestion.lastSuccessAt).toBeNull();
+    // On DB error, today falls back to the zero snapshot.
+    expect(body.ingestion.today).toEqual({
+      runsCount: 0,
+      measurementsCreatedSum: 0,
+      successRate: null,
+    });
   });
 });

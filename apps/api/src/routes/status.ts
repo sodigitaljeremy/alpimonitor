@@ -17,6 +17,14 @@ const LAST_RUN_SELECT = {
 
 type DbStatus = 'ok' | 'error';
 
+interface TodayStats {
+  runsCount: number;
+  measurementsCreatedSum: number;
+  // null when no run has happened yet today — avoids showing a misleading
+  // "0% success rate" the morning after a quiet night.
+  successRate: number | null;
+}
+
 interface StatusResponse {
   api: { status: 'ok'; uptimeSeconds: number };
   database: { status: DbStatus };
@@ -32,7 +40,14 @@ interface StatusResponse {
     } | null;
     lastSuccessAt: string | null;
     healthyThresholdMinutes: number;
+    today: TodayStats;
   };
+}
+
+function startOfUtcDay(now: Date): Date {
+  const d = new Date(now);
+  d.setUTCHours(0, 0, 0, 0);
+  return d;
 }
 
 export const statusRoutes: FastifyPluginAsync = async (app) => {
@@ -46,9 +61,12 @@ export const statusRoutes: FastifyPluginAsync = async (app) => {
     let databaseStatus: DbStatus = 'ok';
     let lastRun: StatusResponse['ingestion']['lastRun'] = null;
     let lastSuccessAt: string | null = null;
+    let today: TodayStats = { runsCount: 0, measurementsCreatedSum: 0, successRate: null };
 
     try {
-      const [latest, latestSuccess] = await Promise.all([
+      const since = startOfUtcDay(new Date());
+
+      const [latest, latestSuccess, todayAgg, todaySuccessCount] = await Promise.all([
         app.prisma.ingestionRun.findFirst({
           orderBy: { startedAt: 'desc' },
           select: LAST_RUN_SELECT,
@@ -57,6 +75,14 @@ export const statusRoutes: FastifyPluginAsync = async (app) => {
           where: { status: 'SUCCESS' },
           orderBy: { startedAt: 'desc' },
           select: { completedAt: true },
+        }),
+        app.prisma.ingestionRun.aggregate({
+          where: { startedAt: { gte: since } },
+          _count: { _all: true },
+          _sum: { measurementsCreatedCount: true },
+        }),
+        app.prisma.ingestionRun.count({
+          where: { startedAt: { gte: since }, status: 'SUCCESS' },
         }),
       ]);
 
@@ -75,6 +101,13 @@ export const statusRoutes: FastifyPluginAsync = async (app) => {
       if (latestSuccess?.completedAt) {
         lastSuccessAt = latestSuccess.completedAt.toISOString();
       }
+
+      const runsCount = todayAgg._count._all;
+      today = {
+        runsCount,
+        measurementsCreatedSum: todayAgg._sum.measurementsCreatedCount ?? 0,
+        successRate: runsCount > 0 ? todaySuccessCount / runsCount : null,
+      };
     } catch (err) {
       app.log.error({ err }, 'status: database probe failed');
       databaseStatus = 'error';
@@ -87,6 +120,7 @@ export const statusRoutes: FastifyPluginAsync = async (app) => {
         lastRun,
         lastSuccessAt,
         healthyThresholdMinutes,
+        today,
       },
     };
 

@@ -1,17 +1,64 @@
 <script setup lang="ts">
+import { storeToRefs } from 'pinia';
+import { computed, onScopeDispose, onMounted } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import AIcon from '@/components/atoms/AIcon.vue';
 import MStatusBadge from '@/components/molecules/MStatusBadge.vue';
+import { useStatusStore } from '@/stores/status';
+
+type BadgeStatus = 'live' | 'stale' | 'offline' | 'loading';
 
 const { t } = useI18n();
+
+const statusStore = useStatusStore();
+const { error, hasLoadedOnce, isHealthy, minutesSinceLastSuccess } = storeToRefs(statusStore);
+
+const badgeStatus = computed<BadgeStatus>(() => {
+  if (!hasLoadedOnce.value) return 'loading';
+  if (error.value) return 'offline';
+  if (minutesSinceLastSuccess.value === null) return 'offline';
+  return isHealthy.value ? 'live' : 'stale';
+});
+
+const badgeLabel = computed(() => {
+  switch (badgeStatus.value) {
+    case 'loading':
+      return t('status.loading');
+    case 'offline':
+      return t('status.offline');
+    case 'live':
+    case 'stale':
+      return minutesSinceLastSuccess.value === 0
+        ? t('status.lastUpdateJustNow')
+        : t('status.lastUpdate', { minutes: minutesSinceLastSuccess.value ?? 0 });
+  }
+  return '';
+});
+
+const POLL_INTERVAL_MS = 60_000;
+let intervalId: ReturnType<typeof setInterval> | null = null;
+
+onMounted(() => {
+  void statusStore.fetchStatus();
+  intervalId = setInterval(() => {
+    void statusStore.fetchStatus();
+  }, POLL_INTERVAL_MS);
+});
+
+onScopeDispose(() => {
+  if (intervalId !== null) {
+    clearInterval(intervalId);
+    intervalId = null;
+  }
+});
 </script>
 
 <template>
   <section class="o-hero-section" aria-labelledby="hero-title">
     <div class="o-hero-section__inner">
       <div class="o-hero-section__status">
-        <MStatusBadge status="live" :label="t('status.lastUpdate', { minutes: 4 })" />
+        <MStatusBadge :status="badgeStatus" :label="badgeLabel" />
       </div>
 
       <div class="o-hero-section__content">

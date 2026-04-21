@@ -8,6 +8,8 @@
   "status": {
     "liveLabel": "En direct",
     "lastUpdate": "Données mises à jour il y a {minutes} min",
+    "lastUpdateJustNow": "Données mises à jour à l'instant",
+    "loading": "Chargement…",
     "offline": "Flux indisponible"
   },
   "hero": {
