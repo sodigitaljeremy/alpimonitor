@@ -10,6 +10,7 @@ const { t } = useI18n();
   <section id="map" class="o-map-section" aria-labelledby="map-title">
     <div class="o-map-section__header">
       <MSectionHeader
+        heading-id="map-title"
         :eyebrow="t('meta.tagline')"
         :title="t('map.title')"
         :subtitle="t('map.subtitle')"

@@ -45,6 +45,7 @@ const metrics: Metric[] = [
   <section class="o-key-metrics-section" aria-labelledby="key-metrics-title">
     <div class="o-key-metrics-section__inner">
       <MSectionHeader
+        heading-id="key-metrics-title"
         :title="t('keyMetrics.title')"
         :subtitle="t('keyMetrics.subtitle')"
         tone="light"

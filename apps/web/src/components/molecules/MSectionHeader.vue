@@ -3,6 +3,7 @@ type Tone = 'light' | 'dark';
 
 withDefaults(
   defineProps<{
+    headingId: string;
     eyebrow?: string;
     title: string;
     subtitle?: string;
@@ -19,7 +20,7 @@ withDefaults(
 <template>
   <header :class="['m-section-header', `m-section-header--${tone}`]">
     <p v-if="eyebrow" class="m-section-header__eyebrow">{{ eyebrow }}</p>
-    <h2 class="m-section-header__title">{{ title }}</h2>
+    <h2 :id="headingId" class="m-section-header__title">{{ title }}</h2>
     <p v-if="subtitle" class="m-section-header__subtitle">{{ subtitle }}</p>
   </header>
 </template>

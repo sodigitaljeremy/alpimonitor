@@ -3,8 +3,9 @@ import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import MSectionHeader from '@/components/molecules/MSectionHeader.vue';
+import { useI18nList } from '@/composables/useI18nList';
 
-const { t, tm, rt } = useI18n();
+const { t } = useI18n();
 
 // Kept in the component, not in fr.json: i18n JSON treats `{...}` as named
 // placeholders and `<...>` as HTML, both of which appear in SPARQL syntax.
@@ -33,13 +34,7 @@ const SPARQL_KEYWORDS = [
 
 type Token = { text: string; kind: 'keyword' | 'uri' | 'text' };
 
-const paragraphs = computed(() => {
-  const raw = tm('whyLindas.paragraphs') as unknown;
-  if (!Array.isArray(raw)) {
-    return [];
-  }
-  return raw.map((entry) => rt(entry));
-});
+const paragraphs = useI18nList<string>('whyLindas.paragraphs');
 
 const sparqlLines = computed(() => SPARQL_EXAMPLE.split('\n').map((line) => highlightLine(line)));
 
@@ -65,6 +60,7 @@ function highlightLine(line: string): Token[] {
   <section class="o-why-lindas-section" aria-labelledby="why-lindas-title">
     <div class="o-why-lindas-section__inner">
       <MSectionHeader
+        heading-id="why-lindas-title"
         eyebrow="Pivot technique — ADR-007"
         :title="t('whyLindas.title')"
         tone="light"
@@ -81,16 +77,15 @@ function highlightLine(line: string): Token[] {
           <figcaption class="o-why-lindas-section__code-caption">
             {{ t('whyLindas.snippet.caption') }}
           </figcaption>
-          <pre class="o-why-lindas-section__code"><code>
-<span
-  v-for="(line, lineIndex) in sparqlLines"
-  :key="lineIndex"
-  class="o-why-lindas-section__code-line"
-><span
-    v-for="(token, tokenIndex) in line"
-    :key="tokenIndex"
-    :class="['o-why-lindas-section__token', `o-why-lindas-section__token--${token.kind}`]"
-  >{{ token.text }}</span></span></code></pre>
+          <pre class="o-why-lindas-section__code"><code><span
+            v-for="(line, lineIndex) in sparqlLines"
+            :key="lineIndex"
+            class="o-why-lindas-section__code-line"
+          ><span
+            v-for="(token, tokenIndex) in line"
+            :key="tokenIndex"
+            :class="['o-why-lindas-section__token', `o-why-lindas-section__token--${token.kind}`]"
+          >{{ token.text }}</span></span></code></pre>
         </figure>
       </div>
     </div>

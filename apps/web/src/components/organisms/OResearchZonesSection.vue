@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import MSectionHeader from '@/components/molecules/MSectionHeader.vue';
 import MStationCard from '@/components/molecules/MStationCard.vue';
+import { useI18nList } from '@/composables/useI18nList';
 
-const { t, tm, rt } = useI18n();
+const { t } = useI18n();
 
 type ResearchStation = {
   name: string;
@@ -13,28 +13,15 @@ type ResearchStation = {
   context: string;
 };
 
-const paragraphs = computed(() => {
-  const raw = tm('researchZones.paragraphs') as unknown;
-  return Array.isArray(raw) ? raw.map((entry) => rt(entry)) : [];
-});
-
-const stations = computed<ResearchStation[]>(() => {
-  const raw = tm('researchZones.stations') as unknown;
-  if (!Array.isArray(raw)) {
-    return [];
-  }
-  return raw.map((entry) => ({
-    name: rt((entry as Record<string, unknown>).name as string),
-    river: rt((entry as Record<string, unknown>).river as string),
-    context: rt((entry as Record<string, unknown>).context as string),
-  }));
-});
+const paragraphs = useI18nList<string>('researchZones.paragraphs');
+const stations = useI18nList<ResearchStation>('researchZones.stations');
 </script>
 
 <template>
   <section class="o-research-zones-section" aria-labelledby="research-zones-title">
     <div class="o-research-zones-section__inner">
       <MSectionHeader
+        heading-id="research-zones-title"
         eyebrow="Val d'Hérens"
         :title="t('researchZones.title')"
         :subtitle="t('researchZones.leadIn')"
