@@ -48,25 +48,30 @@
   "keyMetrics": {
     "title": "Chiffres clés",
     "subtitle": "Un aperçu du réseau monitoré en temps réel",
-    "stations": {
-      "label": "Stations monitorées",
-      "value": "4",
-      "hint": "Flux LINDAS fédéral"
+    "placeholder": "—",
+    "cards": {
+      "stationsMonitored": {
+        "label": "Stations fédérales",
+        "hint": "Flux BAFU LINDAS"
+      },
+      "measurementsToday": {
+        "label": "Mesures aujourd'hui",
+        "hint": "Cumul depuis 00 h UTC"
+      },
+      "lastSync": {
+        "label": "Dernière synchronisation",
+        "hint": "Cron toutes les 10 min"
+      },
+      "researchZones": {
+        "label": "Stations de recherche",
+        "hint": "Réseau CREALP (non exposé)"
+      }
     },
-    "frequency": {
-      "label": "Fréquence de mesure",
-      "value": "10 min",
-      "hint": "Cron d'ingestion"
-    },
-    "measurementsToday": {
-      "label": "Mesures aujourd'hui",
-      "value": "288",
-      "hint": "Cumul sur 24 h"
-    },
-    "lastSync": {
-      "label": "Dernière synchronisation",
-      "value": "il y a 4 min",
-      "hint": "Flux BAFU LINDAS"
+    "relativeTime": {
+      "justNow": "à l'instant",
+      "minutesAgo": "il y a {minutes} min",
+      "hoursAgo": "il y a {hours} h",
+      "never": "—"
     }
   },
   "whyLindas": {

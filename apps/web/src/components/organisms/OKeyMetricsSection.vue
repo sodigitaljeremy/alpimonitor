@@ -1,36 +1,76 @@
 <script setup lang="ts">
+import { storeToRefs } from 'pinia';
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import MSectionHeader from '@/components/molecules/MSectionHeader.vue';
 import MStatCard from '@/components/molecules/MStatCard.vue';
+import { useStationsStore } from '@/stores/stations';
+import { useStatusStore } from '@/stores/status';
+import { formatMinutesAgo } from '@/utils/relativeTime';
 
 const { t } = useI18n();
+
+// Both stores are already instantiated and fetched by OHeroSection (status)
+// and OMapSection (stations), which mount earlier in the page. Re-using the
+// Pinia singletons here is free — no duplicate network calls — and the
+// computeds below react to the same refs.
+const statusStore = useStatusStore();
+const stationsStore = useStationsStore();
+
+const { hasLoadedOnce: statusLoaded, today, minutesSinceLastSuccess } = storeToRefs(statusStore);
+const { hasLoadedOnce: stationsLoaded, stations } = storeToRefs(stationsStore);
+
+const placeholder = computed(() => t('keyMetrics.placeholder'));
+
+// Gate every value on its owning store's hasLoadedOnce so the card never
+// flashes a misleading zero before the first fetch lands. Once loaded, 0
+// is a legitimate value (e.g. ingestion cron hasn't ticked yet after
+// midnight UTC) and is displayed as-is.
+const stationsLiveValue = computed<string>(() => {
+  if (!stationsLoaded.value) return placeholder.value;
+  return String(stations.value.filter((s) => s.dataSource === 'LIVE').length);
+});
+
+const stationsResearchValue = computed<string>(() => {
+  if (!stationsLoaded.value) return placeholder.value;
+  return String(stations.value.filter((s) => s.dataSource === 'RESEARCH').length);
+});
+
+const measurementsTodayValue = computed<string>(() => {
+  if (!statusLoaded.value) return placeholder.value;
+  return String(today.value.measurementsCreatedSum);
+});
+
+const lastSyncValue = computed<string>(() => {
+  if (!statusLoaded.value) return placeholder.value;
+  return formatMinutesAgo(minutesSinceLastSuccess.value, t);
+});
 
 const metrics = computed(() => [
   {
     icon: 'station' as const,
-    label: t('keyMetrics.stations.label'),
-    value: t('keyMetrics.stations.value'),
-    hint: t('keyMetrics.stations.hint'),
-  },
-  {
-    icon: 'clock' as const,
-    label: t('keyMetrics.frequency.label'),
-    value: t('keyMetrics.frequency.value'),
-    hint: t('keyMetrics.frequency.hint'),
+    label: t('keyMetrics.cards.stationsMonitored.label'),
+    value: stationsLiveValue.value,
+    hint: t('keyMetrics.cards.stationsMonitored.hint'),
   },
   {
     icon: 'chart' as const,
-    label: t('keyMetrics.measurementsToday.label'),
-    value: t('keyMetrics.measurementsToday.value'),
-    hint: t('keyMetrics.measurementsToday.hint'),
+    label: t('keyMetrics.cards.measurementsToday.label'),
+    value: measurementsTodayValue.value,
+    hint: t('keyMetrics.cards.measurementsToday.hint'),
+  },
+  {
+    icon: 'clock' as const,
+    label: t('keyMetrics.cards.lastSync.label'),
+    value: lastSyncValue.value,
+    hint: t('keyMetrics.cards.lastSync.hint'),
   },
   {
     icon: 'signal' as const,
-    label: t('keyMetrics.lastSync.label'),
-    value: t('keyMetrics.lastSync.value'),
-    hint: t('keyMetrics.lastSync.hint'),
+    label: t('keyMetrics.cards.researchZones.label'),
+    value: stationsResearchValue.value,
+    hint: t('keyMetrics.cards.researchZones.hint'),
   },
 ]);
 </script>
