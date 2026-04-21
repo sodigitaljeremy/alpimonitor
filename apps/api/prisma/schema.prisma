@@ -46,6 +46,24 @@ enum Role {
   ADMIN
 }
 
+// How a station's measurements flow into AlpiMonitor. Drives UI disclaimers
+// and the ingestion cron's station-selection logic. See ADR-007.
+enum DataSource {
+  LIVE      // ingested from LINDAS (open federal BAFU network)
+  RESEARCH  // monitored by CREALP / Grande Dixence, not yet integrated
+  SEED      // purely demo data, no real-world station behind it
+}
+
+enum IngestionStatus {
+  SUCCESS
+  PARTIAL   // ran to completion but skipped some rows (validation etc.)
+  FAILURE   // network, parse, or DB error — the cron logs and moves on
+}
+
+enum IngestionSourceKind {
+  LINDAS_HYDRO
+}
+
 // ---------- Models ----------
 
 model Catchment {
@@ -69,6 +87,7 @@ model Station {
   catchment    Catchment        @relation(fields: [catchmentId], references: [id])
   flowType     FlowType         @default(NATURAL)
   operatorName String           @default("OFEV")
+  dataSource   DataSource       @default(LIVE)
   isActive     Boolean          @default(true)
   sensors      Sensor[]
   thresholds   Threshold[]
@@ -182,4 +201,25 @@ model ThresholdAudit {
   before    Json
   after     Json
   changedAt DateTime  @default(now())
+}
+
+// One row per run of the ingestion cron (US-2.1+). Kept lean: the raw
+// SPARQL JSON payload is archived to disk under var/lindas-archive/
+// keyed by payloadHash; only the SHA-256 lives in DB for dedup/debug.
+model IngestionRun {
+  id                       String              @id @default(cuid())
+  source                   IngestionSourceKind
+  startedAt                DateTime            @default(now())
+  completedAt              DateTime?
+  status                   IngestionStatus
+  stationsSeenCount        Int                 @default(0)
+  measurementsCreatedCount Int                 @default(0)
+  measurementsSkippedCount Int                 @default(0)
+  errorMessage             String?
+  httpStatus               Int?
+  payloadBytes             Int?
+  payloadHash              String? // SHA-256 hex of the raw SPARQL JSON response
+  durationMs               Int?
+
+  @@index([source, startedAt(sort: Desc)])
 }
