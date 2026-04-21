@@ -30,25 +30,61 @@
 
 ### 3.1 `GET /api/v1/health`
 
-Healthcheck. Non authentifié.
+**Liveness probe** simple. Non authentifié. Utilisé par Coolify/Traefik. Volontairement minimaliste : un appelant peut le hit à la seconde.
 
 **Response 200** :
 
 ```json
 {
   "status": "ok",
-  "timestamp": "2026-04-18T14:00:00.000Z",
-  "database": "ok",
-  "lastIngestionAt": "2026-04-18T13:50:00.000Z",
-  "ingestionHealthy": true
+  "timestamp": "2026-04-21T10:00:00.000Z",
+  "database": "ok"
 }
 ```
 
-**Response 503** si DB inaccessible ou dernière ingestion > 30 min (service dégradé mais pas down).
+**Response 503** si la DB est inaccessible (payload identique avec `database: "error"`).
+
+> Contrairement à la v1 initiale de ce contrat, `/health` ne porte **pas** les infos d'ingestion. Elles vivent sur `/status`, pour garder `/health` cheap et sans dépendance à la table `IngestionRun`.
 
 ---
 
-### 3.2 `GET /api/v1/stations`
+### 3.2 `GET /api/v1/status`
+
+**Observabilité élargie.** Non authentifié. Sert à la fois au debug/ops et au badge frontend « données mises à jour il y a X min ». Retourne le dernier `IngestionRun` (tous statuts confondus) et le timestamp du dernier succès, sans fuiter l'historique.
+
+**Response 200** :
+
+```json
+{
+  "api": { "status": "ok", "uptimeSeconds": 3600 },
+  "database": { "status": "ok" },
+  "ingestion": {
+    "lastRun": {
+      "source": "LINDAS_HYDRO",
+      "status": "SUCCESS",
+      "startedAt": "2026-04-21T10:00:00.000Z",
+      "completedAt": "2026-04-21T10:00:02.340Z",
+      "stationsSeenCount": 4,
+      "measurementsCreatedCount": 8,
+      "durationMs": 2340
+    },
+    "lastSuccessAt": "2026-04-21T10:00:02.340Z",
+    "healthyThresholdMinutes": 30
+  }
+}
+```
+
+- `lastRun` est `null` si la table `IngestionRun` est vide (ex. juste après un reset DB).
+- `lastSuccessAt` est `null` si aucun run `SUCCESS` n'existe encore.
+- Le frontend calcule l'état du badge : `now - lastSuccessAt < healthyThresholdMinutes * 60s` → vert, sinon rouge.
+- Le threshold est surchargeable via `INGESTION_HEALTHY_THRESHOLD_MINUTES` côté serveur.
+- La forme de `ingestion` est volontairement extensible : en v2 elle pourra devenir `{ sources: { LINDAS_HYDRO: {...}, MCH_SWISSMETNET: {...} } }` sans casser les consommateurs actuels si l'on ajoute une clé à côté.
+
+**Response 503** si la DB est inaccessible. Payload identique avec `database.status = "error"` et `ingestion.lastRun = null`.
+
+---
+
+### 3.3 `GET /api/v1/stations`
 
 Liste toutes les stations actives avec leur dernière mesure de chaque paramètre.
 
@@ -97,7 +133,7 @@ Le champ `status` est calculé côté serveur : `NORMAL | VIGILANCE | ALERT | OF
 
 ---
 
-### 3.3 `GET /api/v1/stations/:id`
+### 3.4 `GET /api/v1/stations/:id`
 
 Détail d'une station avec ses métadonnées enrichies (capteurs, seuils, glaciers associés, captages).
 
@@ -151,7 +187,7 @@ Détail d'une station avec ses métadonnées enrichies (capteurs, seuils, glacie
 
 ---
 
-### 3.4 `GET /api/v1/stations/:id/measurements`
+### 3.5 `GET /api/v1/stations/:id/measurements`
 
 Série temporelle pour un ou plusieurs paramètres d'une station.
 
@@ -193,7 +229,7 @@ Série temporelle pour un ou plusieurs paramètres d'une station.
 
 ---
 
-### 3.5 `GET /api/v1/alerts`
+### 3.6 `GET /api/v1/alerts`
 
 Liste des alertes, filtrables et paginées.
 
@@ -236,7 +272,7 @@ Headers : `X-Total-Count`, `X-Page`, `X-Page-Size`.
 
 ---
 
-### 3.6 `GET /api/v1/catchments`
+### 3.7 `GET /api/v1/catchments`
 
 Liste des bassins versants. Utile pour filtres UI.
 
@@ -339,6 +375,7 @@ Base URL `/api/v1`. Pas de rupture prévue en v1. Si évolution, `v2` coexistera
 - Par défaut : **60 req/min par IP** sur toutes les routes
 - `/auth/login` : 5 req/min par IP (plus strict)
 - `/health` : illimité (Coolify doit pouvoir le hit fréquemment)
+- `/status` : illimité (frontend le poll pour rafraîchir le badge freshness)
 
 Header de réponse `RateLimit-Remaining`.
 
