@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import MSectionHeader from '@/components/molecules/MSectionHeader.vue';
@@ -6,39 +7,32 @@ import MStatCard from '@/components/molecules/MStatCard.vue';
 
 const { t } = useI18n();
 
-type Metric = {
-  icon: 'station' | 'clock' | 'chart' | 'signal';
-  labelKey: string;
-  valueKey: string;
-  hintKey: string;
-};
-
-const metrics: Metric[] = [
+const metrics = computed(() => [
   {
-    icon: 'station',
-    labelKey: 'keyMetrics.stations.label',
-    valueKey: 'keyMetrics.stations.value',
-    hintKey: 'keyMetrics.stations.hint',
+    icon: 'station' as const,
+    label: t('keyMetrics.stations.label'),
+    value: t('keyMetrics.stations.value'),
+    hint: t('keyMetrics.stations.hint'),
   },
   {
-    icon: 'clock',
-    labelKey: 'keyMetrics.frequency.label',
-    valueKey: 'keyMetrics.frequency.value',
-    hintKey: 'keyMetrics.frequency.hint',
+    icon: 'clock' as const,
+    label: t('keyMetrics.frequency.label'),
+    value: t('keyMetrics.frequency.value'),
+    hint: t('keyMetrics.frequency.hint'),
   },
   {
-    icon: 'chart',
-    labelKey: 'keyMetrics.measurementsToday.label',
-    valueKey: 'keyMetrics.measurementsToday.value',
-    hintKey: 'keyMetrics.measurementsToday.hint',
+    icon: 'chart' as const,
+    label: t('keyMetrics.measurementsToday.label'),
+    value: t('keyMetrics.measurementsToday.value'),
+    hint: t('keyMetrics.measurementsToday.hint'),
   },
   {
-    icon: 'signal',
-    labelKey: 'keyMetrics.lastSync.label',
-    valueKey: 'keyMetrics.lastSync.value',
-    hintKey: 'keyMetrics.lastSync.hint',
+    icon: 'signal' as const,
+    label: t('keyMetrics.lastSync.label'),
+    value: t('keyMetrics.lastSync.value'),
+    hint: t('keyMetrics.lastSync.hint'),
   },
-];
+]);
 </script>
 
 <template>
@@ -56,9 +50,9 @@ const metrics: Metric[] = [
           v-for="metric in metrics"
           :key="metric.icon"
           :icon="metric.icon"
-          :label="t(metric.labelKey)"
-          :value="t(metric.valueKey)"
-          :hint="t(metric.hintKey)"
+          :label="metric.label"
+          :value="metric.value"
+          :hint="metric.hint"
         />
       </div>
     </div>
