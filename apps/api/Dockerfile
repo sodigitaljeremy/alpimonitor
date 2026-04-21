@@ -51,6 +51,7 @@ COPY --from=build --chown=app:app /prod/api/node_modules ./node_modules
 COPY --from=build --chown=app:app /app/apps/api/dist ./dist
 COPY --from=build --chown=app:app /app/apps/api/prisma ./prisma
 COPY --from=build --chown=app:app /app/apps/api/package.json ./package.json
+COPY --chown=app:app --chmod=0755 apps/api/entrypoint.sh /app/entrypoint.sh
 
 ENV NODE_ENV=production \
     HOST=0.0.0.0 \
@@ -61,6 +62,6 @@ USER app
 EXPOSE 3000
 
 ENTRYPOINT ["/sbin/tini", "--"]
-# Apply pending migrations before booting the server. Idempotent: a no-op
-# when the DB is already at the latest migration.
-CMD ["sh", "-c", "node_modules/.bin/prisma migrate deploy && node dist/index.js"]
+# entrypoint.sh runs `prisma migrate deploy` (mandatory) and, when
+# SEED_ON_BOOT=true, `prisma db seed` (idempotent, non-fatal on failure).
+CMD ["/app/entrypoint.sh"]

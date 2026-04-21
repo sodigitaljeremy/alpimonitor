@@ -44,6 +44,10 @@ services:
       INGESTION_ENABLED: ${INGESTION_ENABLED:-true}
       INGESTION_SCHEDULE: ${INGESTION_SCHEDULE:-*/10 * * * *}
       LINDAS_ARCHIVE_DIR: /app/var/lindas-archive
+      # Re-apply the idempotent seed at every boot. Defends against
+      # accidental data loss (see entrypoint.sh). Set to false once
+      # real operational data must not be overwritten.
+      SEED_ON_BOOT: ${SEED_ON_BOOT:-true}
     expose:
       - '3000'
     volumes:
