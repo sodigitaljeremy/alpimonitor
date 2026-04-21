@@ -56,8 +56,7 @@
       "Le parti pris est simple : privilégier les canaux fédéraux stables, afficher l'origine de chaque mesure, et rendre le code de récupération lisible pour un tiers."
     ],
     "snippet": {
-      "caption": "Requête type envoyée toutes les 10 minutes :",
-      "code": "PREFIX hg: <https://environment.ld.admin.ch/foen/hydro/>\nPREFIX schema: <http://schema.org/>\n\nSELECT ?station ?discharge ?measuredAt WHERE {\n  ?obs a hg:RiverObservation ;\n       hg:station ?station ;\n       hg:discharge ?discharge ;\n       hg:measurementTime ?measuredAt .\n}\nORDER BY DESC(?measuredAt)\nLIMIT 100"
+      "caption": "Requête type envoyée toutes les 10 minutes :"
     }
   },
   "researchZones": {
