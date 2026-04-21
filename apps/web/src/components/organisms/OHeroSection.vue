@@ -57,8 +57,7 @@ const { t } = useI18n();
 }
 
 .o-hero-section__content {
-  @apply flex flex-col gap-5 pt-8 md:pt-16;
-  max-width: 42rem;
+  @apply flex max-w-2xl flex-col gap-5 pt-8 md:pt-16;
 }
 
 .o-hero-section__eyebrow {

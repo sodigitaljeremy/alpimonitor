@@ -33,8 +33,7 @@ withDefaults(
 }
 
 .m-status-badge--live .m-status-badge__dot {
-  @apply bg-primary;
-  box-shadow: 0 0 0 3px rgba(15, 40, 71, 0.12);
+  @apply bg-primary shadow-glow-primary;
 }
 
 .m-status-badge--stale {

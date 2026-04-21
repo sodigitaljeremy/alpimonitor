@@ -49,16 +49,22 @@ const { t } = useI18n();
 }
 
 .o-map-section__frame {
-  @apply relative overflow-hidden rounded-lg border border-slate-alpi/20 bg-glacier shadow-card;
-  height: 70vh;
-  min-height: 420px;
+  @apply relative h-[70vh] min-h-[420px] overflow-hidden rounded-lg border border-slate-alpi/20 bg-glacier shadow-card;
 }
 
 .o-map-section__placeholder {
   @apply flex h-full w-full items-center justify-center;
   background-image:
-    linear-gradient(to right, rgba(15, 40, 71, 0.04) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(15, 40, 71, 0.04) 1px, transparent 1px);
+    linear-gradient(
+      to right,
+      color-mix(in srgb, theme('colors.primary.DEFAULT') 4%, transparent) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      to bottom,
+      color-mix(in srgb, theme('colors.primary.DEFAULT') 4%, transparent) 1px,
+      transparent 1px
+    );
   background-size: 40px 40px;
 }
 
