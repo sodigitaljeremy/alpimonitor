@@ -4,6 +4,7 @@ import { ingestionPlugin } from './plugins/ingestion.js';
 import { prismaPlugin } from './plugins/prisma.js';
 import { uptimePlugin } from './plugins/uptime.js';
 import { healthRoutes } from './routes/health.js';
+import { stationsRoutes } from './routes/stations.js';
 import { statusRoutes } from './routes/status.js';
 
 export async function buildServer(): Promise<FastifyInstance> {
@@ -18,6 +19,7 @@ export async function buildServer(): Promise<FastifyInstance> {
   await server.register(ingestionPlugin);
   await server.register(healthRoutes, { prefix: '/api/v1' });
   await server.register(statusRoutes, { prefix: '/api/v1' });
+  await server.register(stationsRoutes, { prefix: '/api/v1' });
 
   return server;
 }

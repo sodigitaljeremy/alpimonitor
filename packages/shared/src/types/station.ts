@@ -1,4 +1,4 @@
-import type { FlowType, Parameter } from './common.js';
+import type { DataSource, FlowType, Parameter } from './common.js';
 
 export type StationStatus = 'NORMAL' | 'VIGILANCE' | 'ALERT' | 'OFFLINE';
 
@@ -20,6 +20,28 @@ export interface StationDTO {
   altitudeM: number;
   flowType: FlowType;
   operatorName: string;
+  dataSource: DataSource;
   latestMeasurements: StationLatestMeasurement[];
   activeAlertsCount: number;
+}
+
+export type MeasurementAggregate = 'raw' | 'hourly' | 'daily';
+
+export interface MeasurementPoint {
+  t: string;
+  v: number;
+}
+
+export interface MeasurementSeries {
+  parameter: Parameter;
+  unit: string;
+  points: MeasurementPoint[];
+}
+
+export interface StationMeasurementsDTO {
+  stationId: string;
+  from: string;
+  to: string;
+  aggregate: MeasurementAggregate;
+  series: MeasurementSeries[];
 }

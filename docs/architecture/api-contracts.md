@@ -107,6 +107,7 @@ Liste toutes les stations actives avec leur dernière mesure de chaque paramètr
       "altitudeM": 494,
       "flowType": "NATURAL",
       "operatorName": "OFEV",
+      "dataSource": "LIVE",
       "latestMeasurements": [
         {
           "parameter": "DISCHARGE",
@@ -129,7 +130,12 @@ Liste toutes les stations actives avec leur dernière mesure de chaque paramètr
 }
 ```
 
-Le champ `status` est calculé côté serveur : `NORMAL | VIGILANCE | ALERT | OFFLINE`.
+- Le champ `status` (par mesure) est calculé côté serveur : `NORMAL | VIGILANCE | ALERT | OFFLINE`.
+  - `OFFLINE` si `recordedAt` est plus vieux que 60 min (const `STATION_STALE_MINUTES` côté API).
+  - `VIGILANCE` / `ALERT` selon le `Threshold` (direction `ABOVE` ou `BELOW`).
+  - `NORMAL` si pas de seuil défini ou valeur sous vigilance.
+- Le champ `dataSource` vaut `LIVE` (station BAFU ingérée via LINDAS), `RESEARCH` (instrumentée par CREALP / opérateurs, pas de flux public → `latestMeasurements` vide) ou `SEED` (données de démo). Voir ADR-007.
+- Les stations `RESEARCH` remontent ici avec `latestMeasurements: []` — le frontend peut les afficher avec un style distinctif.
 
 ---
 
@@ -193,14 +199,19 @@ Série temporelle pour un ou plusieurs paramètres d'une station.
 
 **Query params** :
 - `parameter?: Parameter` (sinon tous les paramètres actifs)
-- `from: ISO date` (requis)
-- `to: ISO date` (requis)
+- `from: ISO date` (requis, timezone-aware)
+- `to: ISO date` (requis, timezone-aware, strictement > `from`)
 - `aggregate?: 'raw' | 'hourly' | 'daily'` (défaut : auto selon range)
 
 **Règles d'agrégation automatique** (si `aggregate` non fourni) :
 - range ≤ 24h → `raw`
 - range ≤ 7j → `hourly`
 - range > 7j → `daily`
+
+**Erreurs possibles** :
+- `400 VALIDATION_ERROR` : `from`/`to` absents, malformés, ou `from >= to`.
+- `404 NOT_FOUND` : station inexistante.
+- `200` avec `series: []` si la station existe mais n'a pas de capteur actif matchant le filtre (typique des stations `RESEARCH` ou d'un filtre `parameter` qui ne correspond à rien).
 
 **Response 200** :
 
