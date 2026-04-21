@@ -1,5 +1,5 @@
 # Production Compose — deployed as a single "Docker Compose" resource in Coolify.
-# Coolify injects env vars (POSTGRES_*, DATABASE_URL, CORS_ORIGINS, VITE_API_URL)
+# Coolify injects env vars (POSTGRES_*, DATABASE_URL, CORS_ORIGINS, VITE_API_BASE_URL)
 # and provisions Traefik labels + TLS when domains are mapped in its UI.
 #
 # Local smoke test:
@@ -64,7 +64,7 @@ services:
       dockerfile: ./apps/web/Dockerfile
       args:
         # Baked into the Vite bundle at build time — re-deploy web to change it.
-        VITE_API_URL: ${VITE_API_URL}
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL}
     restart: unless-stopped
     expose:
       - '80'

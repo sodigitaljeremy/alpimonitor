@@ -16,10 +16,10 @@ RUN pnpm install --frozen-lockfile --ignore-scripts
 COPY packages/shared ./packages/shared
 COPY apps/web ./apps/web
 
-# Vite replaces import.meta.env.VITE_* at build time, so the API URL
+# Vite replaces import.meta.env.VITE_* at build time, so the API base URL
 # must be provided as a build arg and exported into the env before `vite build`.
-ARG VITE_API_URL=http://localhost:3000/api/v1
-ENV VITE_API_URL=${VITE_API_URL}
+ARG VITE_API_BASE_URL=http://localhost:3000/api/v1
+ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
 
 RUN pnpm --filter @alpimonitor/web build
 

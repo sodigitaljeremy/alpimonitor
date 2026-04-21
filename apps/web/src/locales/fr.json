@@ -1,0 +1,104 @@
+{
+  "meta": {
+    "appName": "AlpiMonitor",
+    "tagline": "Monitoring hydrologique du Rhône valaisan",
+    "subtitle": "Données fédérales en temps réel",
+    "scrollHint": "Découvrir"
+  },
+  "status": {
+    "liveLabel": "En direct",
+    "lastUpdate": "Données mises à jour il y a {minutes} min",
+    "offline": "Flux indisponible"
+  },
+  "hero": {
+    "title": "AlpiMonitor",
+    "subtitle": "Monitoring hydrologique du Rhône valaisan — données fédérales en temps réel",
+    "intro": "Un tableau de bord ouvert sur l'état hydrologique du Valais, alimenté par les mesures officielles de l'Office fédéral de l'environnement."
+  },
+  "map": {
+    "title": "Carte du réseau",
+    "subtitle": "Stations fédérales et zones de recherche CREALP",
+    "legend": {
+      "federal": "Station fédérale (live)",
+      "research": "Zone de recherche CREALP"
+    },
+    "stubHint": "Carte Leaflet — sera branchée en Temps 2"
+  },
+  "keyMetrics": {
+    "title": "Chiffres clés",
+    "subtitle": "Un aperçu du réseau monitoré en temps réel",
+    "stations": {
+      "label": "Stations monitorées",
+      "value": "4",
+      "hint": "Flux LINDAS fédéral"
+    },
+    "frequency": {
+      "label": "Fréquence de mesure",
+      "value": "10 min",
+      "hint": "Cron d'ingestion"
+    },
+    "measurementsToday": {
+      "label": "Mesures aujourd'hui",
+      "value": "288",
+      "hint": "Cumul sur 24 h"
+    },
+    "lastSync": {
+      "label": "Dernière synchronisation",
+      "value": "il y a 4 min",
+      "hint": "Flux BAFU LINDAS"
+    }
+  },
+  "whyLindas": {
+    "title": "Des données sémantiques fédérales",
+    "paragraphs": [
+      "Jusqu'à fin 2024, les débits publics suisses transitaient par un flux XML exposé sur hydrodaten.admin.ch. Ce flux a été déprécié au profit de LINDAS, la plateforme de données liées de l'administration fédérale, qui publie désormais les mêmes mesures sous forme de graphes RDF interrogeables en SPARQL.",
+      "AlpiMonitor s'appuie sur ce nouveau canal. Toutes les 10 minutes, un cron interroge le graph foen/hydro et persiste les mesures les plus récentes. Aucun scraping, aucune dépendance à des formats propriétaires : la source reste traçable et réutilisable par n'importe quel autre service.",
+      "Le parti pris est simple : privilégier les canaux fédéraux stables, afficher l'origine de chaque mesure, et rendre le code de récupération lisible pour un tiers."
+    ],
+    "snippet": {
+      "caption": "Requête type envoyée toutes les 10 minutes :",
+      "code": "PREFIX hg: <https://environment.ld.admin.ch/foen/hydro/>\nPREFIX schema: <http://schema.org/>\n\nSELECT ?station ?discharge ?measuredAt WHERE {\n  ?obs a hg:RiverObservation ;\n       hg:station ?station ;\n       hg:discharge ?discharge ;\n       hg:measurementTime ?measuredAt .\n}\nORDER BY DESC(?measuredAt)\nLIMIT 100"
+    }
+  },
+  "researchZones": {
+    "title": "Au-delà du réseau fédéral",
+    "leadIn": "Le réseau BAFU couvre le Rhône et ses grands affluents, mais s'arrête aux portes du Val d'Hérens.",
+    "paragraphs": [
+      "Le bassin de la Borgne, cœur du Val d'Hérens, est instrumenté par le CREALP et Grande Dixence SA depuis des décennies. Ces mesures locales ne sont pas exposées dans le flux fédéral ; elles vivent aujourd'hui dans des systèmes internes.",
+      "Les stations listées ci-dessous sont des marqueurs d'intérêt : instrumenter ce bassin avec un pipeline équivalent à celui du réseau fédéral est un chantier ouvert, à la jonction entre données institutionnelles et terrain alpin."
+    ],
+    "stationsTitle": "Zones d'intérêt sur la Borgne",
+    "stations": [
+      {
+        "name": "Borgne — Bramois",
+        "river": "Confluence avec le Rhône",
+        "context": "Exutoire du bassin versant"
+      },
+      {
+        "name": "Borgne — Les Haudères",
+        "river": "Haut bassin",
+        "context": "Jonction Borgne d'Arolla / de Ferpècle"
+      },
+      {
+        "name": "Borgne — Evolène",
+        "river": "Milieu de cours",
+        "context": "Suivi amont des glaciers"
+      }
+    ]
+  },
+  "footer": {
+    "sourcesTitle": "Sources et attributions",
+    "sources": {
+      "bafu": "Données hydrologiques : Office fédéral de l'environnement (BAFU) via LINDAS",
+      "osm": "Fonds cartographique : OpenStreetMap — contributeurs",
+      "crealp": "Zones de recherche : CREALP — Centre de recherche sur l'environnement alpin"
+    },
+    "linksTitle": "Liens",
+    "links": {
+      "github": "Code source sur GitHub",
+      "adr": "Décision technique : pivot vers LINDAS (ADR-007)",
+      "linkedin": "Jeremy Soriano — LinkedIn"
+    },
+    "disclaimer": "Démonstration technique développée dans le cadre d'une candidature CREALP. Les données affichées proviennent de sources publiques et ne constituent pas un outil opérationnel de gestion hydrologique."
+  }
+}

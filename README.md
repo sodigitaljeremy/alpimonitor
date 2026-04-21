@@ -17,8 +17,14 @@ Prérequis : Docker + Docker Compose v2.
 ```bash
 git clone git@github.com:sodigitaljeremy/alpimonitor.git && cd alpimonitor
 cp .env.example .env
+cp apps/web/.env.example apps/web/.env
 docker compose up
 ```
+
+Variables clés :
+
+- `.env` (racine) — DB + API (`DATABASE_URL`, `CORS_ORIGINS`, `SEED_ON_BOOT`)
+- `apps/web/.env` — front (`VITE_API_BASE_URL`), inliné dans le bundle au build
 
 Services :
 
@@ -47,7 +53,7 @@ Fichiers concernés :
 - `apps/api/Dockerfile` — image runtime multi-stage (tini PID 1, user non-root, `prisma migrate deploy` au démarrage)
 - `apps/web/Dockerfile` + `apps/web/nginx.conf` — build Vite puis service statique via nginx alpine (SPA fallback, cache assets, gzip)
 - `docker-compose.prod.yml` — une seule ressource Coolify regroupant `postgres` + `api` + `web`
-- `.env.production.example` — variables à renseigner dans le panneau Coolify (`DATABASE_URL`, `CORS_ORIGINS`, `VITE_API_URL`, secrets Postgres)
+- `.env.production.example` — variables à renseigner dans le panneau Coolify (`DATABASE_URL`, `CORS_ORIGINS`, `VITE_API_BASE_URL`, secrets Postgres)
 
 Smoke test en local (images prod sans bind-mount) :
 
