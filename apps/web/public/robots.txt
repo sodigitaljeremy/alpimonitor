@@ -1,0 +1,6 @@
+# robots.txt — AlpiMonitor
+# Application publique de monitoring hydrologique (read-only, pas d'admin).
+User-agent: *
+Allow: /
+
+Sitemap: https://alpimonitor.fr/sitemap.xml
