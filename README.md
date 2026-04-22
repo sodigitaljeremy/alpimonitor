@@ -4,11 +4,36 @@
 
 Tableau de bord hydrologique du bassin de la Borgne (Valais, Suisse) — projet de démonstration technique pour une candidature Front-End au [CREALP](https://www.crealp.ch).
 
-Consomme les données ouvertes de l'Office fédéral de l'environnement (OFEV) et les met en scène pour une lecture rapide par les acteurs du territoire alpin.
+Consomme les données ouvertes de l'Office fédéral de l'environnement (OFEV/BAFU) via LINDAS SPARQL (cf. [ADR-007](./docs/architecture/adr/007-lindas-sparql-data-source.md)) et les met en scène pour une lecture rapide par les acteurs du territoire alpin.
 
-## Stack
+## 🌐 Démo live
 
-Vue 3 + Vite + TypeScript + Tailwind v3.4 · Fastify + Prisma + PostgreSQL · D3 · Leaflet · Docker + Coolify.
+- Application : <https://alpimonitor.fr>
+- API : <https://api.alpimonitor.fr/api/v1/health>
+- Observabilité : <https://api.alpimonitor.fr/api/v1/status>
+
+L'application est déployée en continu via Coolify sur push `main`. Les données affichées sont temps réel — le cron LINDAS agrège les débits du Rhône valaisan toutes les 10 minutes.
+
+## 📸 Aperçu
+
+<!-- TODO Bloc 4 : ajouter screenshots desktop + mobile + drawer ouvert -->
+
+En attendant, voir directement la démo live ci-dessus.
+
+## 📊 Faits marquants
+
+- 13 jours de développement pour une candidature CREALP (deadline 30 avril 2026)
+- 130 tests automatisés verts en CI (70 backend + 60 frontend)
+- 7 ADR documentées dont 2 avec drifts d'implémentation assumés
+- Pivot technique majeur en cours de projet : XML OFEV → LINDAS SPARQL ([ADR-007](./docs/architecture/adr/007-lindas-sparql-data-source.md))
+- Production stable depuis 2026-04-20, ingestion 24/7 sans incident
+- Architecture claire : monorepo pnpm, Atomic Design ABEM, hexagonal API, Docker multi-stage
+
+## 🛠 Stack
+
+- **Frontend** : Vue 3 + Vite + TypeScript strict + Tailwind v3.4 (convention ABEM) · Pinia · vue-i18n · Leaflet (tuiles OSM) · D3 (charts vanilla)
+- **Backend** : Fastify 5 + Prisma 5 + PostgreSQL 16 · Zod (validation) · Pino (logs structurés) · cron interne (ingestion LINDAS)
+- **Infra** : Docker multi-stage · pnpm workspaces · Coolify v4 sur Hetzner · Traefik + Let's Encrypt · GitHub Actions (lint + typecheck + tests + build)
 
 ## Quickstart (dev)
 
@@ -42,7 +67,7 @@ Données de contexte (bassin Borgne, 3 stations, capteurs, seuils, glaciers Ferp
 pnpm --filter @alpimonitor/api exec prisma db seed
 ```
 
-Les mesures hydrologiques ne sont pas seedées — elles arrivent via l'ingestion OFEV.
+Les mesures hydrologiques arrivent via le cron LINDAS (toutes les 10 min).
 
 ## Déploiement (production)
 
@@ -64,18 +89,31 @@ docker compose -f docker-compose.prod.yml --env-file .env.production up --build
 
 Les domaines `alpimonitor.fr`, `www.alpimonitor.fr` et `api.alpimonitor.fr` sont mappés dans l'UI Coolify vers les services `web` (port 80) et `api` (port 3000).
 
-## Documentation
+## 🧠 Choix techniques notables
 
-La spec complète du projet vit dans `docs/` :
+Quelques décisions assumées et documentées :
 
-- `docs/context/` — métier, CREALP, sources de données
-- `docs/product/` — brief, PRD, user stories
-- `docs/architecture/` — overview C4, schéma Prisma, contrats API, ADRs
-- `docs/ui/` — design system
-- `docs/workflow/` — conventions
+- **LINDAS SPARQL plutôt que XML OFEV** ([ADR-007](./docs/architecture/adr/007-lindas-sparql-data-source.md)) — le flux XML `hydroweb.xml` renvoie 404 depuis la migration BAFU vers la plateforme LINDAS. Pivot en cours de projet.
+- **Single-page scrollable plutôt que multi-pages** ([PRD §3.2](./docs/product/prd.md)) — densité d'impression recruteur en moins de 30 secondes.
+- **Tuiles OSM plutôt que swisstopo WMTS** ([ADR-005 drift](./docs/architecture/adr/005-leaflet-for-mapping.md)) — stabilité et zero-cost attribution pour la démo.
+- **Atomic Design ABEM strict** ([ADR-002](./docs/architecture/adr/002-abem-methodology.md)) — préfixes `a-` / `m-` / `o-` / `t-` / `p-` sur 100% des composants Vue.
+- **Lecture seule, pas d'auth** — l'épopée admin (alertes, seuils, JWT) est volontairement hors scope candidature.
 
-Le point d'entrée pour toute session Claude Code est `CLAUDE.md`.
+## 📚 Documentation
+
+Pour un aperçu rapide du projet : [`docs/STATUS.md`](./docs/STATUS.md) (snapshot une page).
+
+Pour aller plus loin :
+
+- [`docs/context/`](./docs/context/) — contexte métier, CREALP, sources de données
+- [`docs/product/`](./docs/product/) — brief, PRD annoté avec statuts d'implémentation
+- [`docs/architecture/`](./docs/architecture/) — overview C4, schéma Prisma, contrats API, 7 ADR
+- [`docs/ui/`](./docs/ui/) — design system tokens et composants
+- [`docs/runbooks/`](./docs/runbooks/) — post-mortems incidents prod
+- [`docs/workflow/`](./docs/workflow/) — conventions Git, code, commits
+
+Le point d'entrée pour toute session Claude Code est [`CLAUDE.md`](./CLAUDE.md).
 
 ## Licence et attributions
 
-Données hydrologiques : [OFEV — hydrodaten.admin.ch](https://www.hydrodaten.admin.ch) · Fond cartographique : © [swisstopo](https://www.swisstopo.admin.ch).
+Données hydrologiques : [OFEV/BAFU via LINDAS](https://lindas.admin.ch) · Fond cartographique : © [OpenStreetMap contributors](https://www.openstreetmap.org/copyright).
