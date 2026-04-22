@@ -48,14 +48,17 @@ const currentYear = new Date().getFullYear();
               </a>
             </li>
             <li>
-              <!-- TODO:URL — LinkedIn URL to provide before Temps 2 push.
-                   Rendered as a non-interactive span until the URL is set so
-                   a focus-visible placeholder never leads to a dead `href="#"`
-                   click (which would scroll the user back to the top). -->
-              <span class="o-site-footer__link o-site-footer__link--placeholder">
+              <a
+                class="o-site-footer__link"
+                href="https://www.linkedin.com/in/sojeremy/"
+                target="_blank"
+                rel="noopener noreferrer"
+                :aria-label="t('footer.links.linkedinAriaLabel')"
+              >
                 <AIcon name="linkedin" :size="16" />
                 <span>{{ t('footer.links.linkedin') }}</span>
-              </span>
+                <AIcon name="external" :size="14" />
+              </a>
             </li>
           </ul>
         </section>
@@ -93,10 +96,6 @@ const currentYear = new Date().getFullYear();
 
 .o-site-footer__link {
   @apply inline-flex items-center gap-2 text-primary transition-colors hover:text-primary-hover;
-}
-
-.o-site-footer__link--placeholder {
-  @apply text-slate-alpi hover:text-slate-alpi;
 }
 
 .o-site-footer__disclaimer {
