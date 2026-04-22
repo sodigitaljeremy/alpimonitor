@@ -49,15 +49,25 @@ enum Role {
 // How a station's measurements flow into AlpiMonitor. Drives UI disclaimers
 // and the ingestion cron's station-selection logic. See ADR-007.
 enum DataSource {
-  LIVE      // ingested from LINDAS (open federal BAFU network)
-  RESEARCH  // monitored by CREALP / Grande Dixence, not yet integrated
-  SEED      // purely demo data, no real-world station behind it
+  LIVE // ingested from LINDAS (open federal BAFU network)
+  RESEARCH // monitored by CREALP / Grande Dixence, not yet integrated
+  SEED // purely demo data, no real-world station behind it
+}
+
+// Factual provenance of a station, orthogonal to DataSource. See ADR-008.
+// CONFIRMED    = documented in a verifiable public source (BAFU/LINDAS,
+//                CREALP project page, academic publication).
+// ILLUSTRATIVE = plausible placement in the cantonal network built for
+//                the demo, without a specific public confirmation.
+enum SourcingStatus {
+  CONFIRMED
+  ILLUSTRATIVE
 }
 
 enum IngestionStatus {
   SUCCESS
-  PARTIAL   // ran to completion but skipped some rows (validation etc.)
-  FAILURE   // network, parse, or DB error — the cron logs and moves on
+  PARTIAL // ran to completion but skipped some rows (validation etc.)
+  FAILURE // network, parse, or DB error — the cron logs and moves on
 }
 
 enum IngestionSourceKind {
@@ -76,26 +86,27 @@ model Catchment {
 }
 
 model Station {
-  id           String           @id @default(cuid())
-  ofevCode     String           @unique
-  name         String
-  riverName    String
-  latitude     Float
-  longitude    Float
-  altitudeM    Float
-  catchmentId  String
-  catchment    Catchment        @relation(fields: [catchmentId], references: [id])
-  flowType     FlowType         @default(NATURAL)
-  operatorName String           @default("OFEV")
-  dataSource   DataSource       @default(LIVE)
-  isActive     Boolean          @default(true)
-  sensors      Sensor[]
-  thresholds   Threshold[]
-  alerts       Alert[]
-  glaciers     StationGlacier[]
-  withdrawals  Withdrawal[]
-  auditEntries ThresholdAudit[]
-  createdAt    DateTime         @default(now())
+  id             String           @id @default(cuid())
+  ofevCode       String           @unique
+  name           String
+  riverName      String
+  latitude       Float
+  longitude      Float
+  altitudeM      Float
+  catchmentId    String
+  catchment      Catchment        @relation(fields: [catchmentId], references: [id])
+  flowType       FlowType         @default(NATURAL)
+  operatorName   String           @default("OFEV")
+  dataSource     DataSource       @default(LIVE)
+  sourcingStatus SourcingStatus   @default(ILLUSTRATIVE)
+  isActive       Boolean          @default(true)
+  sensors        Sensor[]
+  thresholds     Threshold[]
+  alerts         Alert[]
+  glaciers       StationGlacier[]
+  withdrawals    Withdrawal[]
+  auditEntries   ThresholdAudit[]
+  createdAt      DateTime         @default(now())
 }
 
 model Sensor {

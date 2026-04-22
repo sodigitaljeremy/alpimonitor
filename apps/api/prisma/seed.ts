@@ -13,7 +13,14 @@
 //
 // Run: pnpm --filter @alpimonitor/api exec prisma db seed
 
-import { PrismaClient, DataSource, Direction, FlowType, Parameter } from '@prisma/client';
+import {
+  PrismaClient,
+  DataSource,
+  Direction,
+  FlowType,
+  Parameter,
+  SourcingStatus,
+} from '@prisma/client';
 
 const prisma = new PrismaClient();
 
@@ -40,6 +47,7 @@ type StationSeed = {
   flowType: FlowType;
   operatorName: string;
   dataSource: DataSource;
+  sourcingStatus: SourcingStatus;
 };
 
 // Coordinates for LIVE stations come from LINDAS discovery
@@ -47,6 +55,14 @@ type StationSeed = {
 // are BAFU-published station elevations. The Borgne RESEARCH stations
 // keep human-placed coords for the Val d'Hérens villages — close enough
 // for the map narrative, to be refined when the CREALP feed lands.
+//
+// sourcingStatus (see ADR-008) is orthogonal to dataSource:
+//   CONFIRMED    = documented in a verifiable public source.
+//   ILLUSTRATIVE = plausible placement without specific public confirmation.
+// All LIVE stations are CONFIRMED (they stream from the real LINDAS
+// endpoint). Among the CREALP Borgne stations, only Bramois is
+// documented publicly on crealp.ch/monitoring-des-eaux-de-surface;
+// Les Haudères and Evolène are marked ILLUSTRATIVE.
 const STATIONS: StationSeed[] = [
   // --- LIVE BAFU (ingested from LINDAS) ---
   {
@@ -59,6 +75,7 @@ const STATIONS: StationSeed[] = [
     flowType: FlowType.NATURAL,
     operatorName: 'OFEV',
     dataSource: DataSource.LIVE,
+    sourcingStatus: SourcingStatus.CONFIRMED,
   },
   {
     ofevCode: '2011',
@@ -70,6 +87,7 @@ const STATIONS: StationSeed[] = [
     flowType: FlowType.NATURAL,
     operatorName: 'OFEV',
     dataSource: DataSource.LIVE,
+    sourcingStatus: SourcingStatus.CONFIRMED,
   },
   {
     ofevCode: '2630',
@@ -81,6 +99,7 @@ const STATIONS: StationSeed[] = [
     flowType: FlowType.NATURAL,
     operatorName: 'OFEV',
     dataSource: DataSource.LIVE,
+    sourcingStatus: SourcingStatus.CONFIRMED,
   },
   {
     ofevCode: '2009',
@@ -92,6 +111,7 @@ const STATIONS: StationSeed[] = [
     flowType: FlowType.NATURAL,
     operatorName: 'OFEV',
     dataSource: DataSource.LIVE,
+    sourcingStatus: SourcingStatus.CONFIRMED,
   },
   // --- RESEARCH (CREALP / Grande Dixence, not publicly ingestable) ---
   {
@@ -104,6 +124,7 @@ const STATIONS: StationSeed[] = [
     flowType: FlowType.NATURAL,
     operatorName: 'CREALP',
     dataSource: DataSource.RESEARCH,
+    sourcingStatus: SourcingStatus.CONFIRMED,
   },
   {
     ofevCode: 'TBD-HAUDERES',
@@ -115,6 +136,7 @@ const STATIONS: StationSeed[] = [
     flowType: FlowType.RESIDUAL,
     operatorName: 'CREALP',
     dataSource: DataSource.RESEARCH,
+    sourcingStatus: SourcingStatus.ILLUSTRATIVE,
   },
   {
     ofevCode: 'TBD-EVOLENE',
@@ -126,6 +148,7 @@ const STATIONS: StationSeed[] = [
     flowType: FlowType.RESIDUAL,
     operatorName: 'CREALP',
     dataSource: DataSource.RESEARCH,
+    sourcingStatus: SourcingStatus.ILLUSTRATIVE,
   },
 ];
 
@@ -143,6 +166,7 @@ async function seedStations(catchmentId: string) {
         flowType: s.flowType,
         operatorName: s.operatorName,
         dataSource: s.dataSource,
+        sourcingStatus: s.sourcingStatus,
       },
       create: { ...s, catchmentId },
     });
@@ -393,6 +417,8 @@ async function main() {
     stations: await prisma.station.count(),
     stationsLive: await prisma.station.count({ where: { dataSource: 'LIVE' } }),
     stationsResearch: await prisma.station.count({ where: { dataSource: 'RESEARCH' } }),
+    stationsConfirmed: await prisma.station.count({ where: { sourcingStatus: 'CONFIRMED' } }),
+    stationsIllustrative: await prisma.station.count({ where: { sourcingStatus: 'ILLUSTRATIVE' } }),
     sensors: await prisma.sensor.count(),
     thresholds: await prisma.threshold.count(),
     glaciers: await prisma.glacier.count(),
