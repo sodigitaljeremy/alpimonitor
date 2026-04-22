@@ -47,6 +47,7 @@ function makeStation(overrides: Record<string, unknown> = {}): Record<string, un
     flowType: 'NATURAL',
     operatorName: 'OFEV',
     dataSource: 'LIVE',
+    sourcingStatus: 'CONFIRMED',
     sensors: [
       {
         parameter: 'DISCHARGE',
@@ -138,6 +139,32 @@ describe('GET /api/v1/stations', () => {
     };
     expect(body.data[0]?.dataSource).toBe('RESEARCH');
     expect(body.data[0]?.latestMeasurements).toEqual([]);
+  });
+
+  it('exposes sourcingStatus as-is from DB (CONFIRMED / ILLUSTRATIVE)', async () => {
+    state.stations = [
+      makeStation({
+        id: 'stn-confirmed',
+        ofevCode: 'TBD-BRAMOIS',
+        dataSource: 'RESEARCH',
+        sourcingStatus: 'CONFIRMED',
+      }),
+      makeStation({
+        id: 'stn-illustrative',
+        ofevCode: 'TBD-HAUDERES',
+        dataSource: 'RESEARCH',
+        sourcingStatus: 'ILLUSTRATIVE',
+      }),
+    ];
+
+    const res = await app.inject({ method: 'GET', url: '/api/v1/stations' });
+    const body = res.json() as {
+      data: Array<{ id: string; sourcingStatus: string }>;
+    };
+    const confirmed = body.data.find((s) => s.id === 'stn-confirmed');
+    const illustrative = body.data.find((s) => s.id === 'stn-illustrative');
+    expect(confirmed?.sourcingStatus).toBe('CONFIRMED');
+    expect(illustrative?.sourcingStatus).toBe('ILLUSTRATIVE');
   });
 
   it('computes OFFLINE status for a stale measurement', async () => {

@@ -5,6 +5,7 @@ import type {
   MeasurementAggregate,
   MeasurementSeries,
   Parameter,
+  SourcingStatus,
   StationDTO,
   StationMeasurementsDTO,
 } from '@alpimonitor/shared';
@@ -97,6 +98,7 @@ export async function listStations(
       flowType: s.flowType as FlowType,
       operatorName: s.operatorName,
       dataSource: s.dataSource as DataSource,
+      sourcingStatus: s.sourcingStatus as SourcingStatus,
       latestMeasurements,
       activeAlertsCount: s._count.alerts,
     };

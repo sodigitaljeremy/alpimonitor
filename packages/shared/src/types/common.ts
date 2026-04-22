@@ -7,3 +7,8 @@ export type FlowType = 'NATURAL' | 'RESIDUAL' | 'DOTATION';
 // RESEARCH = instrumented by CREALP / operators, not publicly streamed.
 // SEED = demo-only.
 export type DataSource = 'LIVE' | 'RESEARCH' | 'SEED';
+
+// Mirrors the Prisma SourcingStatus enum — see ADR-008.
+// CONFIRMED    = documented in a verifiable public source.
+// ILLUSTRATIVE = plausible placement without specific public confirmation.
+export type SourcingStatus = 'CONFIRMED' | 'ILLUSTRATIVE';

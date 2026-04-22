@@ -7,4 +7,4 @@ export type {
   MeasurementPoint,
   MeasurementSeries,
 } from './types/station.js';
-export type { Parameter, FlowType, DataSource } from './types/common.js';
+export type { Parameter, FlowType, DataSource, SourcingStatus } from './types/common.js';

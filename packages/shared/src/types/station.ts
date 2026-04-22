@@ -1,4 +1,4 @@
-import type { DataSource, FlowType, Parameter } from './common.js';
+import type { DataSource, FlowType, Parameter, SourcingStatus } from './common.js';
 
 export type StationStatus = 'NORMAL' | 'VIGILANCE' | 'ALERT' | 'OFFLINE';
 
@@ -21,6 +21,7 @@ export interface StationDTO {
   flowType: FlowType;
   operatorName: string;
   dataSource: DataSource;
+  sourcingStatus: SourcingStatus;
   latestMeasurements: StationLatestMeasurement[];
   activeAlertsCount: number;
 }
