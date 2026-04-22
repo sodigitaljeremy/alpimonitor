@@ -1,0 +1,132 @@
+# Incident 2026-04-22 — `EACCES` silencieux sur l'archivage LINDAS (side finding)
+
+**Status:** Resolved
+**Severity:** Minor · Latent (silencieux depuis le déploiement initial du 2026-04-20)
+**Duration:** latent ~48 h, découvert à 10:16 UTC le 2026-04-22 pendant la validation d'un autre fix
+**Authors:** Jérémy Soriano (human) + Claude Code (pair)
+
+## TL;DR
+
+Le plugin d'ingestion LINDAS archive chaque payload SPARQL brut en `.json.gz` sur disque dans un named volume Docker monté sur `/app/var/lindas-archive`. Depuis la mise en prod initiale (2026-04-20), **aucun fichier n'a jamais été écrit** : le container runtime tourne en user non-root `app`, mais le volume a été créé par Docker à son premier mount en `root:root`, et le `mkdir` du sous-dossier du jour (`2026-04-22/`) échouait en `EACCES`. L'ingestion SPARQL elle-même n'était pas impactée (les mesures arrivaient normalement en base) — le plugin traite l'échec d'archive comme non-fatal. Symptôme ponctuel et silencieux, sans alerte, découvert par lecture des logs API post-résolution d'un incident Traefik voisin. Fix en deux parties : `mkdir` + `chown` de `/app/var` dans le Dockerfile avant `USER app`, et renommage du volume dans le compose pour forcer une provision neuve avec la bonne ownership.
+
+## Contexte — comment ça a été trouvé
+
+Ce bug est un **side finding** : il n'a pas été cherché. L'équipe validait le déploiement qui fixait l'incident Traefik multihoming de la matinée (cf. [`incident-2026-04-22-traefik-multihoming.md`](./incident-2026-04-22-traefik-multihoming.md)). Dans les logs API affichés par Coolify juste après le swap, une ligne `EACCES: permission denied, mkdir '/app/var/lindas-archive/2026-04-22'` est apparue au premier tick de cron. Le contexte "on valide un fix, on lit les logs, on trouve un autre bug" est important : ce n'est pas un incident réactif, c'est le fruit d'un regard attentif sur la sortie de la production — un process de validation qui rapporte plus que ce qu'il cherche.
+
+## Timeline (UTC)
+
+| Quand (2026-04-22) | Événement |
+|---|---|
+| 2026-04-20 ~18:00 | Premier déploiement prod, premier `docker compose up` en prod, named volume `alpimonitor-prod_alpimonitor-lindas-archive` provisionné par Docker en `root:root`. Premier tick de cron ingestion : `EACCES` silencieux (absorbé par le plugin comme non-fatal). |
+| 2026-04-20 → 2026-04-22 10:15 | Chaque tick de cron LINDAS (toutes les 10 min) échoue à écrire l'archive. L'ingestion SPARQL et la persistence Postgres continuent de fonctionner. Aucune alerte, aucun symptôme utilisateur. |
+| 10:16 | Lecture des logs API post-deploy Traefik (commit [`d930bce`](../../commit/d930bce)) dans le panel Coolify. Détection de `EACCES: permission denied, mkdir '/app/var/lindas-archive/2026-04-22'`. |
+| 10:20 | Diagnostic — lecture du Dockerfile, de `entrypoint.sh`, et de `src/ingestion/archive.ts`. Cause racine confirmée. |
+| 10:35 | Diff proposé à l'humain, validé. |
+| ~10:40 | Fix appliqué ([commit TBA] — Dockerfile + compose rename), gates gates (format/lint/api tests) vertes, compose prod smoke-test `config` parse OK. |
+| ~10:50 | Push, rebuild Coolify, validation SSH : premier tick post-deploy écrit `2026-04-22/<timestamp>-<hash>.json.gz` sans erreur. |
+
+## Symptômes
+
+Dans les logs API, à chaque tick du cron `INGESTION_SCHEDULE` (toutes les 10 min par défaut) :
+
+```
+{"level":40,"msg":"archive write failed (non-fatal)","err":"EACCES: permission denied, mkdir '/app/var/lindas-archive/2026-04-22'"}
+```
+
+À côté, la ligne de succès de l'ingestion SPARQL continue de s'afficher normalement — les mesures arrivent en base, `/api/v1/status` reporte l'ingestion comme OK, le dashboard affiche les débits temps réel. C'est ce découplage entre "ingestion réussie" et "archive ratée" qui rend le bug silencieux.
+
+Vérification volume côté VPS :
+
+```bash
+docker volume inspect alpimonitor-prod_alpimonitor-lindas-archive
+# → Mountpoint: /var/lib/docker/volumes/.../
+docker exec <api-container> ls -ld /app/var/lindas-archive
+# → drwxr-xr-x  root root  (au lieu de app:app attendu)
+```
+
+## Diagnostic
+
+1. **User runtime du container API.** `apps/api/Dockerfile:60` → `USER app`, avec `app` créé en `addgroup -S app && adduser -S -G app app` (ligne 46). Non-root par design (ADR-004).
+2. **Ownership du point de mount.** Aucune instruction `RUN mkdir /app/var/lindas-archive && chown app:app /app/var` dans le Dockerfile. Au premier mount du named volume, Docker provisionne le répertoire avec l'ownership du **point de mount tel qu'il existe dans l'image**. Comme `/app/var/lindas-archive` n'existait pas dans l'image, Docker l'a créé `root:root` côté hôte, et l'a monté dans le container avec cette même ownership.
+3. **Appel qui échoue.** `apps/api/src/ingestion/archive.ts:24` :
+   ```ts
+   const dayDir = join(root, day);  // root = /app/var/lindas-archive
+   await mkdir(dayDir, { recursive: true });  // → EACCES pour user `app`
+   ```
+   Le user `app` n'a ni permission d'écriture sur `/app/var/lindas-archive` (owned root:root, mode 755), ni la capability de `chown`.
+4. **Non-fatal par design.** Le plugin ingestion (`src/plugins/ingestion.ts`) entoure l'appel d'archive d'un `try / catch` et logge en `warn` en cas d'échec — pour ne pas faire crasher le cron sur une panne disque, raisonnable. C'est ce qui masque le bug.
+5. **Volume déjà persistant.** Docker ne copie le contenu d'une image dans un volume **que quand le volume est vide** (premier mount). Donc même avec un Dockerfile corrigé, le volume existant `alpimonitor-prod_alpimonitor-lindas-archive` garderait son ownership root:root pour toujours. Il faut soit supprimer le volume sur le VPS (manuel, hors-code), soit renommer le volume dans le compose (idiomatique, provisionne un volume neuf, orpheline l'ancien).
+
+### Cause racine
+
+Interaction de trois décisions correctes prises séparément mais jamais validées ensemble :
+
+- Runtime non-root (`USER app`) — pratique sécurité standard.
+- Archive sur disque via named volume — persistance entre redéploiements.
+- Compose déclare le mount sans init — on fait confiance à l'image pour pré-créer le dossier avec la bonne ownership.
+
+Chacune est saine ; l'absence d'un `RUN mkdir + chown` explicite dans le Dockerfile rompt le contrat implicite entre les trois.
+
+## Resolution
+
+### A. Fix image (Dockerfile — Part A)
+
+Avant `USER app`, ajouter :
+
+```dockerfile
+# Pre-create the archive root with app ownership so the named volume
+# inherits the right perms on first mount.
+RUN mkdir -p /app/var/lindas-archive && chown -R app:app /app/var
+```
+
+À partir d'un build post-fix, tout **nouveau** volume monté sur `/app/var/lindas-archive` héritera `app:app` au premier mount.
+
+### B. Volume existant (compose — Part B1)
+
+Le named volume existant `alpimonitor-prod_alpimonitor-lindas-archive` reste `root:root` quel que soit le Dockerfile. Renommage forcé dans `docker-compose.prod.yml` :
+
+```yaml
+services:
+  api:
+    volumes:
+      - alpimonitor-lindas-archive-v2:/app/var/lindas-archive
+# ...
+volumes:
+  alpimonitor-pgdata:
+  alpimonitor-lindas-archive-v2:
+```
+
+Au prochain `docker compose up`, Coolify / Compose détecte un nouveau nom de volume, en provisionne un neuf. Le Dockerfile corrigé peuple l'ownership `app:app` sur le nouveau volume. L'ancien volume devient orphelin — il est vide (les archives n'y ont jamais été écrites), donc pas de perte de données.
+
+**Alternatives écartées** :
+
+- Injecter `gosu` ou `su-exec` dans l'entrypoint pour passer root → app après un chown de startup. Invasif, rajoute un binaire setuid-like dans le runtime image juste pour un one-shot.
+- `docker volume rm alpimonitor-prod_alpimonitor-lindas-archive` manuel sur le VPS avant le redeploy. Simple mais hors-code et non reproductible pour un futur environnement.
+
+### Validation prod
+
+Après le push :
+
+- Attente swap Coolify (nouveaux containers api + web).
+- `ssh root@<vps>` puis `docker logs <api-container>` sur la première minute post-boot : pas de `EACCES`, présence d'un `mkdir` réussi au premier tick (ou absence du log de fallback `archive write failed`).
+- `curl -sI https://api.alpimonitor.fr/api/v1/status` → 200 stable, `ingestion.lastRun` continue d'avancer toutes les 10 min.
+- Inspection disque dans le container : `docker exec <api-container> ls /app/var/lindas-archive/2026-04-22/` doit lister au moins un `*.json.gz` après le premier tick passé.
+
+## Prevention
+
+- **Volumes écrits par non-root** : tout Dockerfile qui pose un `USER` non-root ET déclare un point de mount pour un volume persistant doit créer le répertoire cible dans l'image avec l'ownership du user runtime. Sinon le premier mount provisionne en root:root et écrase tacitement.
+- **Logger fatal dans le doute sur un cron idempotent.** Le plugin traite l'échec d'archive comme `warn`. C'est correct pour un disque qui se remplit (on ne veut pas faire tomber l'ingestion), mais insuffisant pour un `EACCES` récurrent qui dure des jours. Pistes pour v2 : seuil d'échecs consécutifs au-delà duquel on passe en `error`, ou exposition d'un compteur d'échecs dans `/api/v1/status` pour que les dashboards le voient.
+- **Test d'intégration "storage"** : un test smoke qui, au démarrage du container, écrit puis relit un fichier dans chaque volume déclaré attraperait ce type d'erreur au premier boot — à envisager si le périmètre grandit.
+
+## Lessons
+
+1. **Un succès de business masque un échec d'infra.** L'ingestion marchait (mesures en base, `/status` vert), donc aucun signal visible. Le vrai test n'est pas "les données arrivent" mais "chaque couche prévue fait ce qu'elle est censée faire". Si on archive, il faut vérifier qu'on archive — pas qu'on n'erreur pas.
+2. **Le non-root runtime a un coût.** C'est la bonne décision, mais ça rend les montages de volumes fragiles. Le moindre oubli d'une instruction `chown` dans un Dockerfile devient un bug silencieux. À documenter comme checklist pour le prochain Dockerfile du projet.
+3. **La lecture des logs post-deploy est un outil de découverte.** Le bug a été trouvé parce qu'on lisait les logs du déploiement du fix précédent. Deux minutes d'attention supplémentaire dans une fenêtre déjà consacrée à la prod, zéro coût marginal, un bug latent attrapé. À systématiser : "après chaque swap prod, lire 30 s de logs en ambiance".
+4. **Non-fatal ≠ pas grave.** Le plugin avait raison de considérer l'archive comme non-critique pour ne pas casser l'ingestion. Mais "non-fatal" dans le code ne veut pas dire "ignorable en prod" — le signal doit remonter quelque part où il est vu. Warn dans la stdout d'un plugin qui log 200 lignes à chaque tick n'est pas un signal, c'est du bruit.
+
+## Follow-ups
+
+- [ ] `docker volume rm alpimonitor-prod_alpimonitor-lindas-archive` sur le VPS, à froid, quand la fenêtre le permet. Volume orphelin vide, aucun impact fonctionnel mais nettoyage à faire.
+- [ ] Revue des autres `USER app` + volume combinations du projet : pour l'instant il n'y en a qu'un (API), mais si un futur service emboîte le pattern, checker le Dockerfile.
+- [ ] (Backlog v2) Remonter l'échec d'archive dans `/api/v1/status` comme compteur d'erreurs consécutives, pour qu'un `warn` silencieux récurrent devienne visible.
