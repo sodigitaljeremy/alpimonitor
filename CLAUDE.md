@@ -99,17 +99,29 @@ alpimonitor/
 
 > **À mettre à jour à la fin de chaque session Claude Code.**
 
-**Date dernière mise à jour** : 2026-04-21
+**Date dernière mise à jour** : 2026-04-22
 **Deadline candidature CREALP** : 2026-04-30
 **Production live** : https://alpimonitor.fr (SPA) + https://api.alpimonitor.fr (API). Auto-deploy sur push `main` via Coolify + GitHub App `sodigitaljeremy`.
+
+### Next session pickup
+
+> Tu reprends à **Bloc 4** d'une session de polish AlpiMonitor pour candidature CREALP (deadline 2026-04-30). Avant de bosser : lis `CLAUDE.md` (cette section + État courant), `docs/STATUS.md`, et les 3 runbooks `docs/runbooks/incident-2026-04-21.md`, `incident-2026-04-22-traefik-multihoming.md`, `incident-2026-04-22-archive-eacces.md` pour te remettre dans le bain. Pas besoin de relire toute l'histoire.
+
+**Bloc 4 à engager (sur signal explicite uniquement) :**
+- OG image (preview social LinkedIn / X)
+- Screenshots pour README (desktop + mobile + drawer)
+- Polish final + envoi candidature
+
+**État au dernier push (2026-04-22 soir) :** 8 commits journée en prod, tout stable. Lighthouse prod Desktop 96/100/100/100 · Mobile 90/100/96/100. 130 tests verts. 2 orphans Docker à cleanup après 24h (cf. mémoire `project_orphan_cleanups_pending.md`).
 
 ### Sprints livrés
 
 - **Sprint 1 (J1-J3, 2026-04-18 → 2026-04-20)** — Fondations + deploy + CI. Monorepo pnpm, Docker compose dev, Prisma schema + migration init, seed idempotent (7 stations, 2 glaciers, 2 captages), CI GitHub Actions (lint + typecheck + tests + build), Dockerfiles multi-stage, déploiement Coolify sur VPS Hetzner derrière Traefik + Let's Encrypt.
 - **Sprint 2 (J4-J7, 2026-04-20 → 2026-04-21)** — Backend ingestion + API + incident prod. Pivot LINDAS SPARQL (ADR-007, flux XML OFEV mort découvert à la discovery). Plugin cron 10 min, parser SPARQL, upsert Prisma idempotent. Endpoints `/stations`, `/stations/:id/measurements`, `/status`, `/health`. Incident 2026-04-21 (DB prod vidée, cause undetermined) → résolution défensive via `entrypoint.sh` + seed-on-boot, post-mortem `docs/runbooks/incident-2026-04-21.md`.
 - **Sprint 3 — Temps 1 (J8-J10)** — Scaffold landing page. 6 sections (Hero / Map / KeyMetrics / WhyLindas / ResearchZones / Footer) en stub, design tokens, atomes ABEM, responsive 375 px validé, i18n vue-i18n (FR only).
-- **Sprint 3 — Temps 2 (J11-J12, EN COURS)** — Câblage données live. T2-C1 CORS + useApi composable. T2-C2 status badge wired sur `/status`. T2-C3 carte Leaflet avec 7 markers LIVE/RESEARCH. T2-C4 drawer + chart D3 24 h. **T2-C5 à venir** : KeyMetrics live + polish responsive.
-- **Sprint 3 — Temps 3-4 (J13)** — Hors scope T2, à planifier : audit Lighthouse + a11y axe-core, README final, éventuellement OG image + screenshots. Date butoir 2026-04-30.
+- **Sprint 3 — Temps 2 (J11-J12, 2026-04-21)** — Câblage données live clôturé. T2-C1 CORS + useApi composable. T2-C2 status badge wired sur `/status`. T2-C3 carte Leaflet avec 7 markers LIVE/RESEARCH. T2-C4 drawer + chart D3 24 h. T2-C5 KeyMetrics live.
+- **Sprint 3 — Temps 3 (J13, 2026-04-22)** — Polish technique + 2 incidents prod résolus. Bloc 1 : LinkedIn footer (`8a3b5d8`) + README v2 (`ee6bfdd`). Incident Traefik multi-homing 504 matinal → suppression du réseau custom (`d930bce` + runbook `f8ffadd`). Side finding archive EACCES silencieux depuis 2026-04-20 → Dockerfile mkdir+chown /app/var avant `USER app`, volume renommé `-v2` (`25d2b6e` + runbook `b0127aa`). Bloc 2 Lighthouse : `robots.txt` + `sitemap.xml` (`491afc2`), contraste WCAG AA sur tokens SPARQL URI + badge research theme-dark (`72c450a`), 6 headers sécurité via snippet `nginx-security-headers.conf` inclus dans server + locations (`2c5c1d7`). Scores finaux prod : Desktop 96/100/100/100 · Mobile 90/100/96/100.
+- **Sprint 3 — Temps 4 (J14, à planifier)** — Bloc 4 non engagé : OG image + screenshots README + polish final + envoi candidature. Deadline 2026-04-30.
 
 ### Stack concrète (état shipped)
 
@@ -129,7 +141,7 @@ alpimonitor/
 | Observabilité | `pino` JSON stdout + `/health` + `/status` | `IngestionRun` persiste chaque tick |
 | CI | GitHub Actions, Node 20, pnpm 10.33.0 | lint + typecheck + test + build sur push main + PR |
 | Déploiement | Coolify (auto-deploy push main) + Traefik + Let's Encrypt | VPS Hetzner `95.216.196.69` |
-| Tests | Vitest + @vue/test-utils + Testing Library | 70 API + 49 web au 2026-04-21 |
+| Tests | Vitest + @vue/test-utils + Testing Library | 70 API + 60 web = 130 au 2026-04-22 |
 
 ### Historique des sessions
 
@@ -138,6 +150,7 @@ alpimonitor/
 - **2026-04-20 (v2)** : Discovery LINDAS → ADR-007. Ingestion SPARQL + cron + `Station.dataSource` + `IngestionRun`. Endpoints `/stations`, `/stations/:id/measurements`, `/status`.
 - **2026-04-21** : Incident DB vidée + post-mortem + défense entrypoint.sh. Sprint 3 démarré : scaffold landing, design tokens, atomes ABEM, refactor `MStationCard`, purge CSS brute, responsive 375 px, design-system.md réconcilié.
 - **2026-04-21 (Temps 2)** : T2-C1 CORS + useApi (`c0ef094`). T2-C2 status badge live (`dae6a2a`). T2-C3 Leaflet map (`47dabed`). T2-C4 drawer + chart D3 24 h (`044a749`).
+- **2026-04-22 (J13 — Temps 3)** : 8 commits sur `main`. Bloc 1 (LinkedIn footer `8a3b5d8` + README v2 `ee6bfdd`). Fix Traefik multi-homing 504 (`d930bce` + runbook `f8ffadd`) — leçon : pas de réseau Docker custom sous Coolify. Fix archive EACCES latent (`25d2b6e` + runbook `b0127aa`) — leçon : `USER` non-root + named volume exigent `mkdir+chown` dans l'image. Bloc 2 Lighthouse : robots/sitemap (`491afc2`), contraste WCAG AA (`72c450a`), 6 headers sécurité nginx (`2c5c1d7`). Lighthouse prod Desktop 96/100/100/100 · Mobile 90/100/96/100. Outils audit créés hors repo : `/tmp/axe-runner/` (axe-core + CSP smoke Puppeteer).
 
 ## Non-scope candidature (2026-04-30)
 
