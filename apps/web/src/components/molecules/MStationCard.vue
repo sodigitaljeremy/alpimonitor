@@ -1,22 +1,31 @@
 <script setup lang="ts">
 import ABadge from '@/components/atoms/ABadge.vue';
+import ASourcingBadge from '@/components/atoms/ASourcingBadge.vue';
 
 type Kind = 'federal' | 'research';
 type Theme = 'light' | 'dark';
+type SourcingStatus = 'CONFIRMED' | 'ILLUSTRATIVE';
 
-withDefaults(
+const props = withDefaults(
   defineProps<{
     name: string;
     river: string;
     context: string;
     kind?: Kind;
     theme?: Theme;
+    sourcingStatus?: SourcingStatus;
   }>(),
   {
     kind: 'research',
     theme: 'light',
+    sourcingStatus: undefined,
   }
 );
+
+// Only render the sourcing badge on research cards — federal BAFU stations
+// are implicitly CONFIRMED (real LINDAS data), showing the badge there
+// would add noise without information. See ADR-008.
+const showSourcingBadge = () => props.kind === 'research' && props.sourcingStatus !== undefined;
 </script>
 
 <template>
@@ -31,6 +40,9 @@ withDefaults(
     <h4 class="m-station-card__name">{{ name }}</h4>
     <p class="m-station-card__river">{{ river }}</p>
     <p class="m-station-card__context">{{ context }}</p>
+    <footer v-if="showSourcingBadge()" class="m-station-card__footer">
+      <ASourcingBadge :status="sourcingStatus!" />
+    </footer>
   </article>
 </template>
 
@@ -53,6 +65,10 @@ withDefaults(
 
 .m-station-card__context {
   @apply text-sm;
+}
+
+.m-station-card__footer {
+  @apply mt-3 flex flex-wrap;
 }
 
 /* Light theme — for white / glacier host backgrounds. */

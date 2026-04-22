@@ -11,6 +11,7 @@ type ResearchStation = {
   name: string;
   river: string;
   context: string;
+  sourcingStatus: 'CONFIRMED' | 'ILLUSTRATIVE';
 };
 
 const paragraphs = useI18nList<string>('researchZones.paragraphs');
@@ -43,6 +44,7 @@ const stations = useI18nList<ResearchStation>('researchZones.stations');
             :name="station.name"
             :river="station.river"
             :context="station.context"
+            :sourcing-status="station.sourcingStatus"
             kind="research"
             theme="dark"
           />

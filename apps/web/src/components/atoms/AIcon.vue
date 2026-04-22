@@ -8,7 +8,9 @@ type Name =
   | 'external'
   | 'github'
   | 'linkedin'
-  | 'close';
+  | 'close'
+  | 'check'
+  | 'info';
 
 withDefaults(
   defineProps<{
@@ -76,6 +78,14 @@ withDefaults(
     <template v-else-if="name === 'close'">
       <path d="m6 6 12 12" />
       <path d="m18 6-12 12" />
+    </template>
+    <template v-else-if="name === 'check'">
+      <path d="m5 12 5 5L20 7" />
+    </template>
+    <template v-else-if="name === 'info'">
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 11v5" />
+      <path d="M12 8h.01" stroke-linecap="round" />
     </template>
   </svg>
 </template>

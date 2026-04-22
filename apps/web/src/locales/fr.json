@@ -85,6 +85,16 @@
       "caption": "Requête type envoyée toutes les 10 minutes :"
     }
   },
+  "sourcing": {
+    "confirmed": {
+      "label": "Source officielle",
+      "tooltip": "Station documentée publiquement sur crealp.ch/monitoring-des-eaux-de-surface"
+    },
+    "illustrative": {
+      "label": "Représentation illustrative",
+      "tooltip": "Emplacement plausible dans le réseau hydrométrique cantonal CREALP (~20 stations sur cours d'eau latéraux, maillage hypothétique pour la démo)"
+    }
+  },
   "researchZones": {
     "title": "Au-delà du réseau fédéral",
     "leadIn": "Le réseau BAFU couvre le Rhône et ses grands affluents, mais s'arrête aux portes du Val d'Hérens.",
@@ -97,17 +107,20 @@
       {
         "name": "Borgne — Bramois",
         "river": "Confluence avec le Rhône",
-        "context": "Exutoire du bassin versant"
+        "context": "Exutoire du bassin versant",
+        "sourcingStatus": "CONFIRMED"
       },
       {
         "name": "Borgne — Les Haudères",
         "river": "Haut bassin",
-        "context": "Jonction Borgne d'Arolla / de Ferpècle"
+        "context": "Jonction Borgne d'Arolla / de Ferpècle",
+        "sourcingStatus": "ILLUSTRATIVE"
       },
       {
         "name": "Borgne — Evolène",
         "river": "Milieu de cours",
-        "context": "Suivi amont des glaciers"
+        "context": "Suivi amont des glaciers",
+        "sourcingStatus": "ILLUSTRATIVE"
       }
     ]
   },
