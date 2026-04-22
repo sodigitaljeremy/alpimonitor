@@ -54,7 +54,7 @@ services:
     expose:
       - '3000'
     volumes:
-      - alpimonitor-lindas-archive:/app/var/lindas-archive
+      - alpimonitor-lindas-archive-v2:/app/var/lindas-archive
     depends_on:
       postgres:
         condition: service_healthy
@@ -74,4 +74,9 @@ services:
 
 volumes:
   alpimonitor-pgdata:
-  alpimonitor-lindas-archive:
+  # -v2 suffix: the original `alpimonitor-lindas-archive` volume was created
+  # root:root at first mount, before the Dockerfile set up /app/var ownership.
+  # Renaming forces Docker to provision a fresh, app-owned volume. The old
+  # volume is empty (archive writes silently EACCES'd since 2026-04-20) and
+  # will be pruned manually — see incident-2026-04-22-archive-eacces.md.
+  alpimonitor-lindas-archive-v2:

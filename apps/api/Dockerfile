@@ -53,6 +53,12 @@ COPY --from=build --chown=app:app /app/apps/api/prisma ./prisma
 COPY --from=build --chown=app:app /app/apps/api/package.json ./package.json
 COPY --chown=app:app --chmod=0755 apps/api/entrypoint.sh /app/entrypoint.sh
 
+# Pre-create the archive root with app ownership so the named volume
+# inherits the right perms on first mount (Docker copies image content
+# into an EMPTY new volume, preserving ownership). Cf.
+# docs/runbooks/incident-2026-04-22-archive-eacces.md.
+RUN mkdir -p /app/var/lindas-archive && chown -R app:app /app/var
+
 ENV NODE_ENV=production \
     HOST=0.0.0.0 \
     PORT=3000
