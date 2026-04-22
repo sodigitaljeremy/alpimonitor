@@ -89,6 +89,13 @@ withDefaults(
   @apply text-white/60;
 }
 
+/* Research badge defaults to text-graphite for light surfaces; on the
+   dark theme that rendered 1.43:1 on the composited surface. Alpine is
+   the RESEARCH token already used for borders/bg here — 5.85:1, WCAG AA. */
+.m-station-card--theme-dark :deep(.a-badge--research) {
+  @apply text-alpine;
+}
+
 /* Federal kind overrides border + background to carry the "live" accent,
    regardless of theme. Kind modifier sits after theme in the DOM so its
    declarations take precedence. */

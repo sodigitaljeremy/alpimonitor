@@ -130,7 +130,10 @@ function highlightLine(line: string): Token[] {
 }
 
 .o-why-lindas-section__token--uri {
-  @apply text-alpine;
+  /* Was text-alpine: 1.62:1 on white (WCAG AA fail). Primary is our
+     "visible link" tone and reads as an IRI/URI cue without adding a
+     new palette entry — 13.4:1 on white. */
+  @apply text-primary;
 }
 
 .o-why-lindas-section__token--text {
