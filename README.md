@@ -16,9 +16,15 @@ L'application est déployée en continu via Coolify sur push `main`. Les donnée
 
 ## 📸 Aperçu
 
-<!-- TODO Bloc 4 : ajouter screenshots desktop + mobile + drawer ouvert -->
+### Vue d'ensemble (Hero)
 
-En attendant, voir directement la démo live ci-dessus.
+![Hero AlpiMonitor — badge LIVE et chiffres clés du Rhône valaisan](./docs/screenshots/01-hero.png)
+
+### Carte interactive des stations
+
+![Carte Leaflet centrée sur le Valais avec les 7 stations hydrologiques (4 LIVE BAFU + 3 RESEARCH CREALP)](./docs/screenshots/02-map.png)
+
+_Captures générées automatiquement via [`scripts/screenshots.mjs`](./scripts/screenshots.mjs) — relançables avec `node scripts/screenshots.mjs`._
 
 ## 📊 Faits marquants
 
