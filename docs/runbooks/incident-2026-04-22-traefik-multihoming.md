@@ -1,0 +1,92 @@
+# Incident 2026-04-22 — 504 Gateway Timeout sur `alpimonitor.fr` après déploiement documentaire
+
+**Status:** Resolved
+**Severity:** Major (site public indisponible ~15 min, API saine, pas d'impact donnée)
+**Duration:** ~15 min du premier 504 à la prod re-stable
+**Authors:** Jérémy Soriano (human) + Claude Code (pair)
+
+## TL;DR
+
+Le 2026-04-22, un push touchant uniquement le README et un lien LinkedIn dans le footer (`ee6bfdd`) a déclenché un rebuild Coolify comme prévu. Le nouveau container `web` est monté sain, servait le bon bundle en interne, et Traefik partageait un réseau avec lui — mais toutes les requêtes HTTPS externes vers `alpimonitor.fr` renvoyaient 504 Gateway Timeout. L'API restait 100% disponible. La cause racine : le container était multi-homed sur deux réseaux Docker (`<project>_default` auto-créé par Coolify + `alpimonitor-net` déclaré dans le compose) ; sans label `traefik.docker.network`, Traefik sélectionnait l'IP backend de façon non-déterministe entre rebuilds, et cette fois-ci avait choisi une route bloquée. Débloqué immédiatement par un restart du container web (loterie favorable au relance), fixé définitivement par la suppression du réseau custom.
+
+## Timeline (UTC)
+
+| Quand (2026-04-22) | Événement |
+|---|---|
+| ~09:34 | `docs(readme): refactor for production readiness` + `feat(web): add LinkedIn link` poussés (commits `8a3b5d8` + `ee6bfdd`). Coolify lance le rebuild. |
+| 09:38:01 | Nouveau bundle détecté en prod (`index-beuKW-Ww.js` / `index-BGQRLObQ.css`). Le polling s'arrête en pensant que le déploiement est OK. |
+| 09:43:27 | Premier `curl -sI https://alpimonitor.fr/` → HTTP 504. `curl -sI https://api.alpimonitor.fr/api/v1/health` → 200, API saine. |
+| 09:43-09:50 | Diagnostic : containers inspectés via SSH. Web container `Up 7 min` avec l'image taggée `ee6bfdd` (nouveau code). Nginx démarre proprement, pas d'erreur. |
+| ~09:50 | Test critique : `docker exec coolify-proxy wget -qO- http://<web-container-name>/` → renvoie le HTML complet avec les nouveaux hashes. **Traefik peut joindre le container par nom, mais ne le joint pas en HTTPS externe.** |
+| ~09:55 | Inspection des réseaux : web attaché à `hto7...` + `hto7..._alpimonitor-net`. Traefik attaché à `coolify` + `hto7...` + `z8v1...`. **Multi-homing web, partage réseau partiel avec Traefik.** Labels Traefik sans `traefik.docker.network`. |
+| ~09:58 | Restart du container `web` via le panel Coolify (hypothèse : ordre d'interface aléatoire au boot, le nouveau boot peut tomber côté heureux). |
+| ~10:00 | `curl -sI https://alpimonitor.fr/` → 200. Validation visuelle OK par l'humain. Prod débloquée. |
+| ~10:15 | Fix permanent appliqué localement (`docker-compose.prod.yml` — suppression du réseau custom), validé via `docker compose config`, commit `d930bce`. |
+| ~10:20 | Push du fix. Coolify rebuild. Polling : nouveau bundle + stabilité 90 s sans 504. |
+
+## Symptômes
+
+- `GET https://alpimonitor.fr/` → `HTTP/2 504` avec `content-length: 15` (payload Traefik "Gateway Timeout").
+- `GET https://www.alpimonitor.fr/` → même comportement.
+- `GET https://api.alpimonitor.fr/api/v1/health` → `{"status":"ok","database":"ok"}` (API saine).
+- `docker ps` côté VPS : web container `Up`, image tag = commit poussé, uptime cohérent avec le rebuild.
+- `docker logs <web-container>` : nginx démarre proprement, aucune erreur, aucun accès refusé.
+
+## Diagnostic
+
+1. **État interne des containers.** Les trois services (`postgres`, `api`, `web`) sont `Up` avec l'image contenant le nouveau code. Aucun crash loop, aucun restart. Postgres `healthy`.
+2. **API vs Web.** L'API passe par Traefik sur `api.alpimonitor.fr` et répond 200 instantanément. Donc Traefik fonctionne globalement ; le problème est spécifique au router `alpimonitor.fr` / `www.alpimonitor.fr`.
+3. **Reachability interne.** `docker exec coolify-proxy wget -qO- http://web-<hash>-<id>/` renvoie le HTML complet avec les nouveaux bundle hashes. **Traefik peut joindre le container en interne, mais quelque chose l'empêche de router en externe.**
+4. **Topologie réseau.**
+   - `web` : `hto7a7d9c20bsxkxjr9wgs3l` (auto-créé par Coolify) + `hto7a7d9c20bsxkxjr9wgs3l_alpimonitor-net` (déclaré dans notre compose).
+   - `coolify-proxy` (Traefik) : `coolify` + `hto7a7d9c20bsxkxjr9wgs3l` + `z8v1m635jy9boy12fqcvzg8r`.
+   - **Intersection : `hto7a7d9c20bsxkxjr9wgs3l` seulement.**
+5. **Labels Traefik.** Routers HTTP + HTTPS + TLS Let's Encrypt tous présents avec les `rule` correctes pour `alpimonitor.fr` et `www.alpimonitor.fr`. **Aucun `traefik.docker.network=<network>` label.**
+
+### Cause racine
+
+Quand un container est attaché à plusieurs réseaux, Traefik doit choisir un backend IP. Sans le hint `traefik.docker.network`, la sélection dépend de l'ordre d'énumération des interfaces réseau par Docker, qui n'est **pas déterministe** entre rebuilds. Au build précédent (hier soir, commit `cee0bdd`), l'ordre avait permis à Traefik de choisir une IP sur le réseau partagé. Au build de ce matin (`ee6bfdd`), l'ordre a basculé — Traefik a sélectionné l'IP du réseau `_alpimonitor-net`, sur lequel il n'est pas présent, d'où le timeout.
+
+C'est un **piège connu** de la combinaison Coolify + `docker-compose` avec réseaux custom : Coolify attache son proxy au réseau `<project>_default` qu'il crée automatiquement, et un réseau custom déclaré par l'utilisateur dans le compose file crée une deuxième appartenance réseau non nécessaire.
+
+## Resolution
+
+### A. Déblocage immédiat (manuel, ~30 s)
+
+Restart du container `web` via le panel Coolify. L'hypothèse : le nouvel ordre d'interface au boot tombe cette fois côté favorable. Observation : HTTP 200 immédiat après relance. **Fix non-déterministe — le prochain rebuild peut retomber dans le même trou.**
+
+### B. Fix permanent ([`d930bce`](../../commit/d930bce))
+
+`docker-compose.prod.yml` :
+
+- Suppression du bloc `networks: alpimonitor-net:` en fin de fichier.
+- Suppression des trois références `networks: - alpimonitor-net` sur `postgres`, `api`, `web`.
+- Commentaire en tête du fichier qui explique le choix et renvoie vers ce runbook.
+
+Docker Compose crée automatiquement un réseau `<project>_default` qui est exactement celui que Coolify utilise pour attacher Traefik. Les trois services y sont maintenant attachés, et **seulement** à celui-là — plus de multi-homing, plus d'ambiguïté pour Traefik.
+
+### Validation locale avant push
+
+`docker compose -f docker-compose.prod.yml --env-file .env.production config` parse proprement : les trois services listent `networks: default: null`, et le bloc `networks` racine expose `default: name: alpimonitor-prod_default`. Service DNS intact (`DATABASE_URL=postgresql://...@postgres:5432/...` continue de résoudre).
+
+### Validation prod
+
+Après le push du fix : attente du swap Coolify, vérification que les nouveaux bundle hashes apparaissent ET que `curl https://alpimonitor.fr/` reste à 200 pendant au moins 90 s (pas de 504 qui rattrape après le swap).
+
+## Prevention
+
+- **Principe un-réseau.** Pour un stack Coolify / docker-compose, ne pas déclarer de réseau custom sauf besoin technique explicite (ex : isoler un service qui ne doit pas parler à Traefik). Laisser Compose créer son `_default` garantit que Traefik et les services partagent exactement un réseau.
+- **Symptôme révélateur.** Un 504 qui apparaît après un rebuild *alors que l'API voisine fonctionne* pointe vers un problème de routage au niveau du reverse proxy, pas d'un crash applicatif. Vérifier `docker exec <proxy> wget http://<service>/` avant toute autre hypothèse — 5 secondes pour disqualifier toute la chaîne "code cassé".
+- **Label de secours.** Si un réseau custom est vraiment nécessaire (scope v2), ajouter `traefik.docker.network=<nom>` dans les labels du service exposé pour forcer Traefik à choisir le bon backend.
+
+## Lessons
+
+1. **Un déploiement documentaire peut casser la prod.** Ce push ne touchait que le README et un lien de footer. Le rebuild Coolify a néanmoins recréé le container web, et le bug latent dans le compose a choisi ce moment pour se manifester. Conclusion : il n'existe pas de "déploiement safe" par nature. Toute mise en main peut toucher le runtime.
+2. **Reachability interne ≠ reachability externe.** Le container servait le bon contenu depuis le Traefik proxy par `wget` ; il était quand même injoignable depuis l'extérieur. Les deux chemins réseau utilisent des IP différentes quand un container est multi-homed. Toujours tester le vrai chemin utilisateur.
+3. **Non-déterminisme Docker.** L'ordre des interfaces réseau n'est pas stable entre rebuilds. Ce qui a marché une fois peut échouer au prochain `docker compose up --build`. Assumer le pire, supprimer l'ambiguïté à la source.
+4. **Débloquer puis fixer.** Le restart manuel (Option 3 proposée) a débloqué la prod en 30 s. Le fix permanent (Option 1) a suivi tranquillement. Séparer "remettre en marche" et "corriger la cause" est une bonne discipline — l'utilisateur n'a pas à attendre qu'on ait tout compris.
+
+## Follow-ups
+
+- [ ] `docker network rm hto7a7d9c20bsxkxjr9wgs3l_alpimonitor-net` côté VPS une fois que le fix est en prod depuis 24 h (réseau orphelin après la bascule, sans impact mais à nettoyer).
+- [ ] Revue rapide de `docker-compose.yml` (dev) — mêmes principes, mais le dev n'est pas gated par Traefik donc risque moindre ; à regarder si un incident similaire touche un autre environnement.
