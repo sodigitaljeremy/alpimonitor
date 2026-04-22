@@ -3,7 +3,7 @@
 > Product Requirements Document. Exigences fonctionnelles et non-fonctionnelles détaillées.
 > Référence principale pour la décomposition en user stories et en tickets de développement.
 
-## État du périmètre (audit 2026-04-21)
+## État du périmètre (audit 2026-04-22)
 
 Ce PRD a été rédigé à J1 (2026-04-18) avec un scope délibérément large pour couvrir à la fois la **démonstration candidature CREALP** (13 jours, deadline 2026-04-30) et une **roadmap produit long-terme**. À J4 (2026-04-20), le pivot **LINDAS SPARQL** (ADR-007) a invalidé l'hypothèse "flux XML OFEV" qui sous-tendait toute la section ingestion. Les user stories ont donc été réorganisées autour du livrable candidature et d'un backlog post-candidature.
 
@@ -65,11 +65,11 @@ Ce PRD a été rédigé à J1 (2026-04-18) avec un scope délibérément large p
 
 ### 2.1 Performance
 
-**NFR-2.1.1 → NFR-2.1.4** 🚧 **IN PROGRESS** — Mesures Lighthouse prévues en Temps 4 polish. Bundle web à ce jour : `381 kB js / 128 kB gzip + 62 kB css / 13 kB gzip` (T2-C4 build). Au-dessus de la cible 300 kB ; Leaflet + D3 + Chart dominent. Cible NFR-2.1.3 à ré-évaluer après code-splitting éventuel en T4.
+**NFR-2.1.1 → NFR-2.1.4** ✅ **DONE (J13, 2026-04-22)** — Lighthouse prod mesuré : Desktop **96/100/100/100** · Mobile **90/100/96/100** (performance / a11y / best practices / SEO). Bundle web : `382 kB js / 129 kB gzip + 63 kB css / 13 kB gzip`. Au-dessus de la cible NFR-2.1.3 (300 kB) ; Leaflet + D3 dominent, code-splitting ⏭ **DEFERRED** (pas de gain LCP mesurable vs complexité).
 
 ### 2.2 Accessibilité
 
-**NFR-2.2.1 → NFR-2.2.6** 🚧 **IN PROGRESS (partiel)** — Contrastes OK (tokens design-system), focus visible, aria-label sur drawer, Escape fermeture, scroll-lock. **Manquants** : navigation clavier Leaflet, tableau de données alternatif aux charts (FR-1.1.5 + NFR-2.2.5), audit axe-core. Audit formel reporté en Temps 4.
+**NFR-2.2.1 → NFR-2.2.6** ✅ (partiel) **DONE in 72c450a** — Contrastes WCAG AA validés sur sections sombres (tokens SPARQL URI + badge research theme-dark). Focus visible, aria-label sur drawer, Escape fermeture, scroll-lock. Lighthouse a11y prod = 100/100 Desktop · 100/100 Mobile. Audit axe-core informel via Puppeteer (`/tmp/axe-runner/`). **Restants ⏭ DEFERRED** : navigation clavier Leaflet (FR-1.1.5), tableau de données alternatif aux charts (NFR-2.2.5).
 
 ### 2.3 Responsive
 
@@ -79,7 +79,7 @@ Ce PRD a été rédigé à J1 (2026-04-18) avec un scope délibérément large p
 
 ### 2.4 Sécurité
 
-**NFR-2.4.1** ⏭ **DEFERRED** — Helmet + CSP stricte : non wired côté API (Fastify par défaut).
+**NFR-2.4.1** ✅ (partiel) **DONE in 2c5c1d7** — 6 headers sécurité servis par nginx côté SPA (HSTS, CSP, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Cross-Origin-Opener-Policy) via snippet `nginx-security-headers.conf`. **Côté API Fastify ⏭ DEFERRED** — Helmet non wired, acceptable pour la démo read-only.
 **NFR-2.4.2** ✅ **DONE in c0ef094** — CORS avec origines déclarées (`ALLOWED_ORIGINS` env).
 **NFR-2.4.3** ⏭ **DEFERRED** — Rate limiting. Hors scope démo, CREALP peut tester tranquillement.
 **NFR-2.4.4** ✅ — Zod systématique sur tous les endpoints (packages/shared/schemas/).
@@ -98,7 +98,7 @@ Ce PRD a été rédigé à J1 (2026-04-18) avec un scope délibérément large p
 
 ### 2.6 Tests
 
-**NFR-2.6.1** ✅ — Vitest sur logique métier (ingestion parser, services, stores). 70 tests API + 49 tests web au dernier commit.
+**NFR-2.6.1** ✅ — Vitest sur logique métier (ingestion parser, services, stores). 70 tests API + 60 tests web = **130 tests verts** au 2026-04-22.
 **NFR-2.6.2** ⏭ **DEFERRED** — Coverage formel ≥ 80 %. Pas mesuré aujourd'hui.
 **NFR-2.6.3** ✅ (partiel) — `@vue/test-utils` sur OStationDrawer, stores, composables. Couverture exhaustive des composants reportée.
 **NFR-2.6.4** ⏭ **DEFERRED** — E2E Playwright. Hors scope candidature (13 j serrés, ROI faible vs le reste).
@@ -115,8 +115,8 @@ Ce PRD a été rédigé à J1 (2026-04-18) avec un scope délibérément large p
 
 ### 2.8 Documentation
 
-**NFR-2.8.1** 🚧 — README à reviser en Temps 4 (actuellement pitch basique + badge CI).
-**NFR-2.8.2** ✅ — Docs `docs/` étoffées : context (4), product (2), architecture (4 + 7 ADR), ui (1), workflow (1), runbooks (1).
+**NFR-2.8.1** ✅ **DONE in ee6bfdd + f0fac41** — README v2 : pitch, stack, quickstart, liens docs, badge CI, 2 screenshots live capturés via `scripts/screenshots.mjs` (reproducible Puppeteer).
+**NFR-2.8.2** ✅ — Docs `docs/` étoffées : context (4), product (2), architecture (4 + 7 ADR), ui (1), workflow (1), runbooks (3).
 **NFR-2.8.3** ⏭ **DEFERRED** — JSDoc formel. Privilégié commentaires "why non-obvious" inline.
 **NFR-2.8.4** ⏭ **DEFERRED** — Mermaid pour flux. Candidat pour Temps 4.
 
@@ -152,7 +152,7 @@ Ce PRD a été rédigé à J1 (2026-04-18) avec un scope délibérément large p
 - **US-3.7** ✅ (partiel) — CORS (`c0ef094`), Helmet/rate-limit DEFERRED
 - **US-3.8** ✅ `/health` — `e9a35e1` ; `/status` observabilité bonus — `755b3fb`
 
-#### Epic 4 — Front-end Vue 3 🚧 **IN PROGRESS (Sprint 3 — Temps 2 en cours)**
+#### Epic 4 — Front-end Vue 3 ✅ **DONE (Sprint 3, clôturé 2026-04-22)**
 
 - **US-4.1 → US-4.2** ✅ Layout + design tokens — `7145e14` + `400f427`
 - **US-4.3** ✅ Atomes ABEM (AIcon, ABadge, AButton, etc.) — progressivement depuis `7145e14`
@@ -162,21 +162,21 @@ Ce PRD a été rédigé à J1 (2026-04-18) avec un scope délibérément large p
 - **US-4.8** ❌ Page comparaison multi-stations — CANCELLED (scope candidature)
 - **US-4.9** ❌ Page alertes — CANCELLED
 - **US-4.10** ❌ Page admin seuils — CANCELLED
-- **US-4.11** 🚧 États loading/error/empty — câblés sur hero (T2-C2), map (T2-C3), drawer (T2-C4) ; reste KeyMetrics (T2-C5)
-- **US-4.12** 🚧 Responsive + a11y — audit formel en Temps 4
+- **US-4.11** ✅ États loading/error/empty — câblés sur hero (T2-C2), map (T2-C3), drawer (T2-C4), KeyMetrics (T2-C5)
+- **US-4.12** ✅ (partiel) Responsive + a11y — 375 px → 1440 px validé, contraste WCAG AA shipped `72c450a`, Lighthouse a11y 100/100
 
 #### Epic 5 — Tests et qualité 🚧
 
-- **US-5.1** ✅ Tests unitaires logique métier (70 API + 49 web)
+- **US-5.1** ✅ Tests unitaires logique métier (70 API + 60 web = 130)
 - **US-5.2** ✅ (partiel) Tests composants Vue
 - **US-5.3** ⏭ E2E Playwright — DEFERRED
-- **US-5.4** ⏭ Audit Lighthouse formel — Temps 4
+- **US-5.4** ✅ **DONE (2026-04-22)** — Lighthouse prod Desktop 96/100/100/100 · Mobile 90/100/96/100
 
 #### Epic 6 — Déploiement et docs ✅ / 🚧
 
 - **US-6.1** ✅ Dockerfiles multi-stage — `9d959d5`
 - **US-6.2** ✅ Deploy Coolify + HTTPS — `9d959d5`
-- **US-6.3** 🚧 README final — Temps 4
+- **US-6.3** ✅ **DONE in ee6bfdd + f0fac41** — README final v2 + 2 screenshots live (script Puppeteer reproducible)
 - **US-6.4** ✅ Smoke tests post-deploy — validés 2026-04-20
 
 ### 3.2 Décisions de recentrage (non prévues au PRD initial)
