@@ -1,7 +1,7 @@
 # AlpiMonitor — Statut en 30 secondes
 
 > Ce document est un **snapshot projet**. Il est destiné à quelqu'un qui ouvre ce repo pour la première fois — typiquement un recruteur technique CREALP — et veut comprendre où on en est sans parcourir l'historique Git.
-> Dernière mise à jour : 2026-04-22.
+> Dernière mise à jour : 2026-04-22 (après-midi).
 
 ## Objectif
 
@@ -48,6 +48,7 @@ Ce qui doit fonctionner pour l'évaluation CREALP, et ce qui reste volontairemen
 - **SEO** : `robots.txt` + `sitemap.xml` servis par nginx, meta description + Open Graph + Twitter Card.
 - **Sécurité web** : 6 headers servis par nginx (HSTS, CSP, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Cross-Origin-Opener-Policy).
 - **Contraste WCAG AA** validé sur sections sombres (tokens SPARQL URI + badge research theme-dark).
+- **Transparence du sourcing des stations** (ADR-008, session du 2026-04-22 après-midi) : champ `sourcingStatus` (`CONFIRMED` / `ILLUSTRATIVE`) exposé du Prisma schema au badge UI sur chaque carte research. Audit factuel documenté dans `docs/context/crealp-stations-sourcing.md`.
 - **3 post-mortems incidents** documentés en runbooks (perte DB 2026-04-21, 504 Traefik multihoming 2026-04-22, archive EACCES silencieux 2026-04-22).
 
 ### Ce qui est hors scope candidature
@@ -64,12 +65,17 @@ Volontairement non-livré — absence assumée, pas un oubli :
 
 Détail complet + justification : `docs/product/prd.md` section "État du périmètre".
 
+## Historique récent (J13-J14)
+
+- **2026-04-22 (matin — Bloc 4 polish final)** : 5 commits — Open Graph + Twitter Card meta, screenshots README via Puppeteer versionné, STATUS + PRD + CLAUDE reconcilés avec l'état shipped, **tag `v1.0.0-crealp`** posé et poussé. Production stable 90s post-swap, validation OG meta + 6 headers sécurité en prod.
+- **2026-04-22 (après-midi — Session Option A : transparence sourcing)** : 4 commits — champ `Station.sourcingStatus` + migration Prisma + seed reclassifié (5 CONFIRMED / 2 ILLUSTRATIVE), exposition DTO API verbatim, atom `ASourcingBadge` + intégration `MStationCard` avec tooltip a11y + tests (71 API + 68 web = 139 tests verts), **[ADR-008](architecture/adr/008-station-sourcing-transparency.md)** + [audit factuel `crealp-stations-sourcing.md`](context/crealp-stations-sourcing.md).
+
 ## Prochaines étapes (avant 2026-04-30)
 
-Tous les blocs techniques du livrable candidature sont **shipped en prod**. Ce qui reste est éditorial / cosmétique :
+Tous les blocs techniques du livrable candidature sont **shipped en prod**.
 
-- **Bloc 4 (J14)** — Polish final : OG image graphique (nice-to-have), éventuels micro-ajustements éditoriaux, tag `v1.0.0-crealp`, envoi candidature.
-- **Backlog post-2026-04-30** : optimisation image API prod (406 Mo → ~200 Mo via `binaryTargets` Prisma), cleanup volumes/networks Docker orphelins, éventuelle Helmet + rate limiting côté API, E2E Playwright.
+- **Push + validation prod** des 4 commits session Option A (non pushés au moment de cette mise à jour).
+- **Backlog post-2026-04-30** : optimisation image API prod (406 Mo → ~200 Mo via `binaryTargets` Prisma), cleanup volumes/networks Docker orphelins, éventuelle Helmet + rate limiting côté API, E2E Playwright, recherche identifiants réels des stations `ILLUSTRATIVE` via portail Web Hydro CREALP (cf. ADR-008).
 
 ## Références rapides
 
@@ -77,7 +83,8 @@ Tous les blocs techniques du livrable candidature sont **shipped en prod**. Ce q
 - **Instructions Claude Code** : `CLAUDE.md` (à la racine) — point d'entrée pour toute session IA
 - **Vision produit** : `docs/product/brief.md`
 - **Exigences annotées livré/deferred/cancelled** : `docs/product/prd.md`
-- **Décisions techniques (7 ADR)** : `docs/architecture/adr/`
+- **Décisions techniques (8 ADR)** : `docs/architecture/adr/` (7 initiales + ADR-008 sourcing transparency)
+- **Audit factuel du sourcing des stations** : `docs/context/crealp-stations-sourcing.md`
 - **Design system** : `docs/ui/design-system.md`
 - **Conventions code** : `docs/workflow/conventions.md`
 - **Post-mortems incidents** :

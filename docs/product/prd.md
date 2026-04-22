@@ -98,7 +98,7 @@ Ce PRD a été rédigé à J1 (2026-04-18) avec un scope délibérément large p
 
 ### 2.6 Tests
 
-**NFR-2.6.1** ✅ — Vitest sur logique métier (ingestion parser, services, stores). 70 tests API + 60 tests web = **130 tests verts** au 2026-04-22.
+**NFR-2.6.1** ✅ — Vitest sur logique métier (ingestion parser, services, stores). 71 tests API + 68 tests web = **139 tests verts** au 2026-04-22 (après-midi).
 **NFR-2.6.2** ⏭ **DEFERRED** — Coverage formel ≥ 80 %. Pas mesuré aujourd'hui.
 **NFR-2.6.3** ✅ (partiel) — `@vue/test-utils` sur OStationDrawer, stores, composables. Couverture exhaustive des composants reportée.
 **NFR-2.6.4** ⏭ **DEFERRED** — E2E Playwright. Hors scope candidature (13 j serrés, ROI faible vs le reste).
@@ -116,7 +116,7 @@ Ce PRD a été rédigé à J1 (2026-04-18) avec un scope délibérément large p
 ### 2.8 Documentation
 
 **NFR-2.8.1** ✅ **DONE in ee6bfdd + f0fac41** — README v2 : pitch, stack, quickstart, liens docs, badge CI, 2 screenshots live capturés via `scripts/screenshots.mjs` (reproducible Puppeteer).
-**NFR-2.8.2** ✅ — Docs `docs/` étoffées : context (4), product (2), architecture (4 + 7 ADR), ui (1), workflow (1), runbooks (3).
+**NFR-2.8.2** ✅ — Docs `docs/` étoffées : context (5), product (2), architecture (4 + 8 ADR), ui (1), workflow (1), runbooks (3). ADR-008 (sourcing transparency) + `context/crealp-stations-sourcing.md` ajoutés dans la session du 2026-04-22 après-midi.
 **NFR-2.8.3** ⏭ **DEFERRED** — JSDoc formel. Privilégié commentaires "why non-obvious" inline.
 **NFR-2.8.4** ⏭ **DEFERRED** — Mermaid pour flux. Candidat pour Temps 4.
 

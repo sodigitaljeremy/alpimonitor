@@ -99,20 +99,26 @@ alpimonitor/
 
 > **À mettre à jour à la fin de chaque session Claude Code.**
 
-**Date dernière mise à jour** : 2026-04-22
+**Date dernière mise à jour** : 2026-04-22 (après-midi, après session Option A transparence sourcing)
 **Deadline candidature CREALP** : 2026-04-30
 **Production live** : https://alpimonitor.fr (SPA) + https://api.alpimonitor.fr (API). Auto-deploy sur push `main` via Coolify + GitHub App `sodigitaljeremy`.
 
 ### Next session pickup
 
-> Tu reprends à **Bloc 4** d'une session de polish AlpiMonitor pour candidature CREALP (deadline 2026-04-30). Avant de bosser : lis `CLAUDE.md` (cette section + État courant), `docs/STATUS.md`, et les 3 runbooks `docs/runbooks/incident-2026-04-21.md`, `incident-2026-04-22-traefik-multihoming.md`, `incident-2026-04-22-archive-eacces.md` pour te remettre dans le bain. Pas besoin de relire toute l'histoire.
+> Tu reprends après la **session Option A — transparence du sourcing des stations** (pivot stratégique candidature). Avant de bosser : lis `CLAUDE.md` (cette section + État courant), `docs/STATUS.md`, [ADR-008](docs/architecture/adr/008-station-sourcing-transparency.md), [`docs/context/crealp-stations-sourcing.md`](docs/context/crealp-stations-sourcing.md), et les 3 runbooks `docs/runbooks/incident-2026-04-21.md`, `incident-2026-04-22-traefik-multihoming.md`, `incident-2026-04-22-archive-eacces.md`. Pas besoin de relire toute l'histoire.
 
-**Bloc 4 à engager (sur signal explicite uniquement) :**
-- OG image (preview social LinkedIn / X)
-- Screenshots pour README (desktop + mobile + drawer)
-- Polish final + envoi candidature
+**État commits locaux (non pushés au dernier snapshot) :**
 
-**État au dernier push (2026-04-22 soir) :** 8 commits journée en prod, tout stable. Lighthouse prod Desktop 96/100/100/100 · Mobile 90/100/96/100. 130 tests verts. 2 orphans Docker à cleanup après 24h (cf. mémoire `project_orphan_cleanups_pending.md`).
+- `8f9ffb5` feat(api): add sourcingStatus field to Station model
+- `fb94f5a` feat(api): expose sourcingStatus on /stations endpoint
+- `b5af019` feat(web): add sourcing status badge on research station cards
+- `<hash>` docs(context): document station sourcing transparency (ADR-008) — rédaction en cours / fin de session Option A
+
+**Prochaine étape (point 5) :** push groupé + polling Coolify 90s + validation prod (badges visibles sur https://alpimonitor.fr, `curl /api/v1/stations | jq '.data[] | select(.dataSource=="RESEARCH") | {name, sourcingStatus}'` conforme, re-run axe-core pour confirmer pas de régression a11y).
+
+**Sans nouveau tag** : `v1.0.0-crealp` reste sur le commit de fin Bloc 4 (`0eaaad1`). La session Option A enrichit le v1 post-tag sans cérémonie v1.0.1.
+
+**État au dernier push (2026-04-22 matin, Bloc 4 clôturé) :** 5 commits journée, tout stable. Lighthouse prod Desktop 96/100/100/100 · Mobile 90/100/96/100. 130 tests verts. Tag `v1.0.0-crealp` posé. 2 orphans Docker à cleanup après 24h (cf. mémoire `project_orphan_cleanups_pending.md`).
 
 ### Sprints livrés
 
@@ -121,7 +127,8 @@ alpimonitor/
 - **Sprint 3 — Temps 1 (J8-J10)** — Scaffold landing page. 6 sections (Hero / Map / KeyMetrics / WhyLindas / ResearchZones / Footer) en stub, design tokens, atomes ABEM, responsive 375 px validé, i18n vue-i18n (FR only).
 - **Sprint 3 — Temps 2 (J11-J12, 2026-04-21)** — Câblage données live clôturé. T2-C1 CORS + useApi composable. T2-C2 status badge wired sur `/status`. T2-C3 carte Leaflet avec 7 markers LIVE/RESEARCH. T2-C4 drawer + chart D3 24 h. T2-C5 KeyMetrics live.
 - **Sprint 3 — Temps 3 (J13, 2026-04-22)** — Polish technique + 2 incidents prod résolus. Bloc 1 : LinkedIn footer (`8a3b5d8`) + README v2 (`ee6bfdd`). Incident Traefik multi-homing 504 matinal → suppression du réseau custom (`d930bce` + runbook `f8ffadd`). Side finding archive EACCES silencieux depuis 2026-04-20 → Dockerfile mkdir+chown /app/var avant `USER app`, volume renommé `-v2` (`25d2b6e` + runbook `b0127aa`). Bloc 2 Lighthouse : `robots.txt` + `sitemap.xml` (`491afc2`), contraste WCAG AA sur tokens SPARQL URI + badge research theme-dark (`72c450a`), 6 headers sécurité via snippet `nginx-security-headers.conf` inclus dans server + locations (`2c5c1d7`). Scores finaux prod : Desktop 96/100/100/100 · Mobile 90/100/96/100.
-- **Sprint 3 — Temps 4 (J14, à planifier)** — Bloc 4 non engagé : OG image + screenshots README + polish final + envoi candidature. Deadline 2026-04-30.
+- **Sprint 3 — Temps 4 (J14, 2026-04-22 matin, Bloc 4)** — Polish final clôturé. OG + Twitter Card (`9fb7019`), screenshots README via Puppeteer versionné (`f0fac41`), STATUS J13 (`06e539e`), PRD reconcilé Bloc 1+2+3 (`adc0dc7`), CLAUDE pickup (`0eaaad1`). Tag `v1.0.0-crealp` posé + poussé. Prod stable 90s post-swap.
+- **Session Option A (J14, 2026-04-22 après-midi)** — Pivot stratégique transparence sourcing. Audit factuel des 3 stations RESEARCH → Bramois `CONFIRMED` (documentée crealp.ch), Les Haudères + Evolène `ILLUSTRATIVE`. Champ `Station.sourcingStatus` traversé du Prisma (`8f9ffb5`) au DTO (`fb94f5a`) à un atom dédié `ASourcingBadge` avec tooltip a11y sur cartes research (`b5af019`). Docs : ADR-008 + `context/crealp-stations-sourcing.md` + reconcile STATUS/PRD/CLAUDE. 139 tests verts (71 API + 68 web).
 
 ### Stack concrète (état shipped)
 
@@ -141,7 +148,7 @@ alpimonitor/
 | Observabilité | `pino` JSON stdout + `/health` + `/status` | `IngestionRun` persiste chaque tick |
 | CI | GitHub Actions, Node 20, pnpm 10.33.0 | lint + typecheck + test + build sur push main + PR |
 | Déploiement | Coolify (auto-deploy push main) + Traefik + Let's Encrypt | VPS Hetzner `95.216.196.69` |
-| Tests | Vitest + @vue/test-utils + Testing Library | 70 API + 60 web = 130 au 2026-04-22 |
+| Tests | Vitest + @vue/test-utils + Testing Library | 71 API + 68 web = 139 au 2026-04-22 (après-midi) |
 
 ### Historique des sessions
 
@@ -151,6 +158,8 @@ alpimonitor/
 - **2026-04-21** : Incident DB vidée + post-mortem + défense entrypoint.sh. Sprint 3 démarré : scaffold landing, design tokens, atomes ABEM, refactor `MStationCard`, purge CSS brute, responsive 375 px, design-system.md réconcilié.
 - **2026-04-21 (Temps 2)** : T2-C1 CORS + useApi (`c0ef094`). T2-C2 status badge live (`dae6a2a`). T2-C3 Leaflet map (`47dabed`). T2-C4 drawer + chart D3 24 h (`044a749`).
 - **2026-04-22 (J13 — Temps 3)** : 8 commits sur `main`. Bloc 1 (LinkedIn footer `8a3b5d8` + README v2 `ee6bfdd`). Fix Traefik multi-homing 504 (`d930bce` + runbook `f8ffadd`) — leçon : pas de réseau Docker custom sous Coolify. Fix archive EACCES latent (`25d2b6e` + runbook `b0127aa`) — leçon : `USER` non-root + named volume exigent `mkdir+chown` dans l'image. Bloc 2 Lighthouse : robots/sitemap (`491afc2`), contraste WCAG AA (`72c450a`), 6 headers sécurité nginx (`2c5c1d7`). Lighthouse prod Desktop 96/100/100/100 · Mobile 90/100/96/100. Outils audit créés hors repo : `/tmp/axe-runner/` (axe-core + CSP smoke Puppeteer).
+- **2026-04-22 (J14 — Bloc 4 polish final)** : 5 commits + tag. OG + Twitter Card (`9fb7019`), screenshots README Puppeteer versionné (`f0fac41`), STATUS J13 (`06e539e`), PRD Bloc 1+2+3 shipped (`adc0dc7`), CLAUDE pickup (`0eaaad1`). Tag annotated `v1.0.0-crealp` posé + poussé. 130 tests verts. Prod stable 90s post-swap, validation OG + 6 headers sécurité.
+- **2026-04-22 (J14 — Session Option A : transparence sourcing)** : 4 commits (non pushés au moment de la rédaction). Audit factuel stations RESEARCH contre `crealp.ch/monitoring-des-eaux-de-surface` → Bramois `CONFIRMED`, Les Haudères + Evolène `ILLUSTRATIVE`. Champ `Station.sourcingStatus` (Prisma + migration additive `8f9ffb5`), DTO verbatim SCREAMING_SNAKE (`fb94f5a`), atom `ASourcingBadge` + tooltip CSS a11y `role=tooltip` + `aria-describedby` sur cartes research (`b5af019`). Docs : ADR-008 + `context/crealp-stations-sourcing.md` + reconcile STATUS/PRD/CLAUDE (`<hash>` en cours). 139 tests verts (71 API + 68 web). Leçons : pattern de provenance typée extensible (MétéoSuisse, GLAMOS) ; palette Tailwind defaults pour variante unique (respect ADR-002) ; tooltip CSS sans lib tant que scope layout reste simple.
 
 ## Non-scope candidature (2026-04-30)
 
