@@ -9,6 +9,11 @@
 
 name: alpimonitor-prod
 
+# Aucun réseau custom n'est déclaré : Docker Compose crée automatiquement
+# <project>_default partagé avec Traefik (managed par Coolify). Cela évite
+# le multi-homing qui rendait le routage Traefik non-déterministe entre
+# rebuilds (incident 504 du 2026-04-22, cf. docs/runbooks/).
+
 services:
   postgres:
     image: postgres:16-alpine
@@ -19,8 +24,6 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
     volumes:
       - alpimonitor-pgdata:/var/lib/postgresql/data
-    networks:
-      - alpimonitor-net
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
       interval: 10s
@@ -52,8 +55,6 @@ services:
       - '3000'
     volumes:
       - alpimonitor-lindas-archive:/app/var/lindas-archive
-    networks:
-      - alpimonitor-net
     depends_on:
       postgres:
         condition: service_healthy
@@ -68,14 +69,9 @@ services:
     restart: unless-stopped
     expose:
       - '80'
-    networks:
-      - alpimonitor-net
     depends_on:
       - api
 
 volumes:
   alpimonitor-pgdata:
   alpimonitor-lindas-archive:
-
-networks:
-  alpimonitor-net:
