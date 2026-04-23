@@ -1,0 +1,176 @@
+# ADR-010 — Architecture frontend post-refactor : façades feature-grouped, `lib/` domain-scoped, process learnings
+
+**Date** : 2026-04-23
+**Statut** : Acceptée — implémentée
+**Implémentation** :
+
+- `ec8b860` audit architectural initial (`docs/refactor/audit.md` — 10 hypothèses validées, 4 patterns SkillSwap retenus, budget 15-20 h estimé),
+- `3f775d5` R4 relocation `chart-model.ts` + `station-map-mapping.ts` → `lib/charts/` + `lib/map/`,
+- `02c9a8f` R1 centralisation HTTP via `lib/api-client.ts` + union discriminée `ApiError`,
+- `a2f47a1` R3 split `useStationsStore` via 3 façades feature-grouped (`useStationsList`, `useStationSelection`, `useStationMeasurements`),
+- `2a68f28` R2 extraction `OStationDrawer` god component via 4 primitives (`useEscapeClose`, `useScrollLock`, `useStationDrawer`, `lib/hydrodaten.ts`),
+- `355402c` R5 tests intégration `OHydroChart.test.ts` + `OStationMap.test.ts`,
+- `958baf3` R6+R7 extraction constantes (`lib/constants/{chart,map,time}.ts`), partage `BadgeStatus`, correction `Introduction.mdx`,
+- `9439e43` R8 corrections passe C pré-merge (voir `docs/refactor/passe-c-findings.md`).
+
+## Contexte
+
+La phase Storybook (2026-04-23 matin) a livré un catalogue exhaustif sur `main` — 15 composants, 46 stories, 5 MDX design system, déploiement `storybook.alpimonitor.fr` (cf. [ADR-009](https://github.com/sodigitaljeremy/alpimonitor/blob/main/docs/architecture/adr/009-storybook-scope.md)). Avec le tag `v1.0.0-crealp` posé 24 h plus tôt et la fenêtre candidature encore ouverte jusqu'au 2026-04-30, il restait un levier différenciateur pour un poste Front-End visé : une refonte architecturale explicite, ciblée sur le repo `apps/web/`, démontrable à un relecteur en moins de 10 min via un diff lisible et une ADR.
+
+L'audit de refactor (`docs/refactor/audit.md`, 332 lignes, commité `ec8b860` à 15:42 la même journée) a validé 10 hypothèses de dette perçues par l'auteur — `organisms/` fourre-tout mélangeant `.vue` / `.ts` libres / tests, `services/` vide avec un `.gitkeep` orphelin, stores multi-responsabilités, `OStationDrawer.vue` god component à 271 lignes concentrant 7 responsabilités orthogonales, typage d'erreur pauvre (`Error` générique) — et identifié 4 patterns issus du codebase SkillSwap de Jérémy (`~/Desktop/Documentation SkillSwap/projet-skillswap/`) transposables au stack Vue 3 + Pinia : `lib/api-client.ts` centralisé, `hooks/{feature}/` feature-grouped, `organisms/{Page}/` feature-grouped, `lib/validation/` co-localisé.
+
+L'enjeu était double :
+
+1. **Livrer un refactor « Architect Engineer »** dont chaque ligne est défendable en entretien technique senior (cf. règle d'engagement 8 de `CLAUDE.md`), pas un big-bang opportuniste.
+2. **Ne pas casser la prod**. Le livrable est live sur `alpimonitor.fr` avec auto-deploy sur push `main`. Chaque phase refactor devait pouvoir être commit atomique, testée, mergeable indépendamment si les suivantes cassaient.
+
+La session R8 (2026-04-23 en soirée) a traité la phase finale : un `/ultrareview` cloud prévu comme gate de revue multi-agent a renvoyé 404/502 transitoires pendant 24 h, impossible de l'exécuter. Pivot vers une **passe C locale disciplinée** sur 8 axes (error handling, race conditions, memory leaks, typing, tests faibles, cohérence cross-file, Pinia/Vue 3 anti-patterns, règle façade) documentée dans `docs/refactor/passe-c-findings.md`. Cette passe a révélé un finding Critical inattendu (C1 : gate `pnpm typecheck` no-op silencieux depuis la migration Storybook) qui structure les conséquences ci-dessous.
+
+## Décision
+
+Le refactor livre **7 phases atomiques** dans l'ordre de dépendance recommandé par l'audit (R4 en warmup sans logique, R1 en socle HTTP, puis R3 / R2 / R5 en parallèle, R6+R7 en polish, R8 en corrections pré-merge).
+
+### Patterns structurants introduits
+
+#### Façades feature-grouped sur Pinia
+
+`useStationsStore` portait trois responsabilités — liste, sélection UI, cache de mesures par station. R3 introduit `apps/web/src/composables/stations/` avec trois façades **read-only** :
+
+- **`useStationsList()`** — expose `stations`, `isLoading`, `error`, `hasLoadedOnce`, `loadAll()`. Consommé par `OMapSection` et `OKeyMetricsSection`.
+- **`useStationSelection()`** — expose `selectedStation`, `selectedStationId`, `selectStation(id)`, `clearSelection()`. Consommé par `OStationMap` (délégation click → sélection) et indirectement par `OStationDrawer`.
+- **`useStationMeasurements(stationId: Ref<string | null>)`** — reçoit un `stationId` réactif, dérive `series`, `isLoading`, `error` via `computed` (pas `storeToRefs`, car la clé varie), expose `load()` et `reload()` (force). Consommé par `useStationDrawer`.
+
+Un `composables/stations/index.ts` barrel ré-exporte les trois + le composable orchestrateur `useStationDrawer`. Les quatre JSDoc de tête nomment explicitement la règle : « Consumers should import this composable, NOT `useStationsStore` directly. Exception: test files and Storybook decorators ».
+
+**Règle enforcée** : aucun fichier `.vue` de production n'importe `useStationsStore` directement. Vérifié par `grep -rn "useStationsStore" --include="*.vue" src/` → 0 résultat au post-R3. Les exceptions documentées (`.test.ts` pour seed via `$patch`, `.stories.ts` pour decorators `seedStations`) sont les deux seuls points d'accès latéral.
+
+#### `lib/` domain-scoped
+
+R4 et R6 déplacent la logique pure hors de `components/organisms/` :
+
+- **`lib/api-client.ts`** (R1) — `api.getStations()`, `api.getStationMeasurements(id, params)`, `api.getStatus()`, `api.getHealth()`. Le type `ApiError` est une union discriminée `{ kind: 'network'|'http'|'parse', ... }` ; chaque échec retourne un `ApiResponse<T> = { success: true; data: T } | { success: false; error: ApiError }`. Helper `apiErrorMessage(error)` pour les logs. Les stores et le composable `useApi` (supprimé) délèguent désormais ici.
+- **`lib/charts/chart-model.ts`** (R4) — `computeYDomain`, `findNearestPointByPx` — fonctions pures D3 extraites de `OHydroChart.vue`.
+- **`lib/map/station-map-mapping.ts`** (R4) — `stationToMarkerOptions`, `findLatestDischarge` — fonctions pures Leaflet.
+- **`lib/hydrodaten.ts`** (R2) — `stationToHydrodatenUrl(station)` + constante `RESEARCH_OFEV_PREFIX = 'TBD'` — lie la génération d'URL Hydrodaten à une règle seed explicite.
+- **`lib/status.ts`** (R7) — type `BadgeStatus = 'live' | 'stale' | 'offline' | 'loading'` partagé entre `MStatusBadge.vue` et `OHeroSection.vue` (auparavant inliné dans chaque fichier).
+- **`lib/constants/{chart,map,time}.ts`** (R6) — `MARGIN`, `MAP_CENTER`, `MAP_ZOOM`, `ONE_DAY_MS`, `NARROW_BREAKPOINT`, etc. Dédup des magic numbers auparavant dupliqués entre `OHydroChart.vue` / `OStationMap.vue` / `OStationDrawer.vue` / `stores/stations.ts`.
+
+Le dossier `services/` (vide depuis l'origine, un `.gitkeep` orphelin) est supprimé dans R8 — `lib/` rend son intention obsolète.
+
+#### Primitives composables partagées
+
+R2 extrait trois primitives génériques pour le drawer, placées dans `composables/shared/` :
+
+- **`useEscapeClose(isOpen, onClose)`** — écoute `keydown` via `@vueuse/core`'s `useEventListener` (auto-cleanup), dispatche `onClose()` uniquement quand `isOpen.value === true` (pas de fight avec d'autres handlers Escape sur la page).
+- **`useScrollLock(isOpen)`** — snapshot + restore `document.body.style.overflow`. Commenté explicitement « single-consumer only » (cf. §Trade-offs ci-dessous).
+- **`usePolling(fn, intervalMs, { immediate })`** — stateless (ni `loading`, ni `error`), auto-cleanup via `onScopeDispose`. Consommé par `OHeroSection` pour poller `/status` toutes les 60 s.
+
+Une quatrième fonction pure (`lib/hydrodaten.ts`) complète l'extraction côté logique métier.
+
+#### `useStationDrawer` orchestrateur
+
+`OStationDrawer.vue` passe de 271 lignes à 193, dont 91 de styles scoped et 71 de template. Le `<script setup>` ne fait plus que 22 lignes : un appel à `useStationDrawer()` et une destructuration. Toute la logique (store subscription, snapshot `now`, dérivations, callbacks, Escape, scroll-lock, URL Hydrodaten, i18n `coordsLabel`) vit dans `composables/stations/useStationDrawer.ts` et est testée en isolation (`useStationDrawer.test.ts`, 177 lignes, 5 scénarios).
+
+### Règles enforced et vérifiables
+
+1. **Aucun consumer prod de `useStationsStore` hors façades** — vérifié par grep, part de la passe C.
+2. **`lib/` porte uniquement de la logique pure ou un wrapper HTTP** — aucun import de Pinia, de Vue reactivity (hors `Ref` en signature), de `@vueuse/core`.
+3. **Chaque façade a un JSDoc de tête nommant la règle** et l'exception tests/Storybook.
+4. **`pnpm typecheck` est un gate réellement bloquant** — R8 corrige le script `vue-tsc --noEmit` → `vue-tsc --noEmit --project tsconfig.app.json`. Voir §Process learnings.
+
+### Arbitrages d'implémentation
+
+- **Trois façades, un seul store sous-jacent**. L'audit envisageait trois stores distincts — rejeté. Pinia fournit déjà un singleton par `defineStore()` ; multiplier les stores dupliquerait l'état partagé (`stations: StationDTO[]`) sans bénéfice. Les façades **lisent** le même store mais **exposent** des slices disjointes typées. Le pattern composables-over-stores est standard SkillSwap et vue-i18n.
+- **`useStationMeasurements` prend un `Ref<string | null>` en paramètre**, pas un string. Justification : l'unique consumer (`useStationDrawer`) dérive la clé de `selectedStationId` qui est réactif. Un paramètre string forcerait l'appelant à re-créer le composable à chaque changement d'id — pattern anti-Vue. Le `computed` interne track la source.
+- **Pas de façade sur `useStatusStore`**. `useStationsStore` avait 3 contextes, `useStatusStore` en a 1 (snapshot ingestion). Deux consumers prod (`OHeroSection`, `OKeyMetricsSection`) lisent le même état. La règle de 3 n'est pas atteinte ; introduire une indirection là serait cérémonie. Un commentaire en tête de `stores/status.ts` (ajouté dans R8) pointe cette ADR et le seuil de révision (3ème consumer à subset distinct).
+- **`ApiError` est retourné dans un `ApiResponse<T>` discriminé, pas thrown**. Choix produit : chaque call-site doit nommer explicitement la branche d'échec (`if (result.success)`) plutôt que wrapper dans un `try/catch`. Le gain est la lisibilité du flux heureux vs erreur et l'impossibilité d'oublier la gestion d'erreur (le compilateur TS le rappelle). Inspiré de `ts-results` / Rust `Result<T, E>` sans en importer la lib.
+- **`lib/constants/` split par domaine** (`chart.ts`, `map.ts`, `time.ts`) plutôt qu'un fichier monolithique. Intention : un import `ONE_DAY_MS` ne doit pas traîner un token Leaflet dans le bundle tree-shaken. Vite handles le tree-shaking mais la séparation documente l'intention de scope.
+- **R8 consolide le finding m2 de la passe C avec les migrations stories OHeroSection/OMapSection dans un unique commit atomique (`9439e43`)**. Les deux fixes (typage Pinia `$patch` + seed `ApiError` discriminé au lieu de `new Error(...)`) sont entrelacés — les séparer aurait créé des états intermédiaires non-typecheck. Atomicité d'abord.
+
+## Conséquences
+
+### Positives
+
+- **Onboarding accéléré**. Un nouveau contributeur suit une traversée évidente : `components/organisms/*.vue` → `composables/{stations,shared}/*.ts` → `lib/*.ts` → `stores/*.ts`. Les JSDoc de tête de façade nomment la règle et l'exception. Zéro diagram obligatoire pour comprendre le flow data.
+- **Testabilité uniforme**. 102 tests verts (21 fichiers) couvrent les trois couches : fonctions pures (`chart-model.test.ts`, `hydrodaten.test.ts`, `station-map-mapping.test.ts`), composables (`useStationDrawer.test.ts`, `useStationsList.test.ts`, etc.), composants (`OHydroChart.test.ts`, `OStationMap.test.ts`, `OStationDrawer.test.ts`). Chaque couche est testable sans monter la suivante.
+- **Signal entretien**. Règles enforced (« aucun consumer prod hors façades ») + vérification par grep + exception nommée = vocabulaire d'équipe scalable. Plus rare en candidature qu'une liste de technos.
+- **Gates robustes**. Post-R8, `pnpm typecheck` visite réellement `src/**/*.ts` + `src/**/*.vue` et remonte 0 erreur. `pnpm format:check`, `pnpm lint`, `pnpm test` (102 passing) forment un gate complet avant push. La CI GitHub Actions hérite automatiquement.
+- **Pattern `ApiError` typé**. Toute évolution UX future (bouton « Réessayer » sur network, « Contacter support » sur http 5xx, « Recharger la page » sur parse) se branche sur `error.kind` exhaustif. Le compilateur TS force la complétude des `switch`.
+- **Constantes dédupliquées, maintenance pointuée**. `ONE_DAY_MS` existait en 3 endroits différents (store + drawer + chart). Un changement de fenêtre (24 h → 48 h) se fait désormais à un seul endroit et propage partout.
+
+### Négatives
+
+- **Surface de fichiers augmentée**. 25 fichiers créés (composables + lib + constants + tests). Acceptable — chaque fichier est <150 lignes, monocouche, testable isolément. Le coût cognitif de « trouver où vit telle logique » baisse malgré l'augmentation du nombre d'unités.
+- **Discipline CSF3 à maintenir**. Post-R8, toute nouvelle story doit suivre les conventions migrées (`Meta<T>` annotation explicite plutôt que `satisfies typeof Component`, `Decorator` importé de `@storybook/vue3-vite`, `Partial<$state>` pour les seeds `$patch`). Un README `apps/web/STORYBOOK.md` trace les conventions mais ne les enforce pas — un lint rule dédiée ou un ADR précis serait un garde-fou plus robuste (scope post-candidature).
+- **Budget fenêtre candidature**. La session R8 entière consommée sur corrections + ADR-010 + passe C au lieu d'une feature additive (brush/zoom D3, export CSV). Arbitrage ROI assumé : le signal architectural + process rigueur (découverte C1 + runbook `/ultrareview` absent + plan C) est spécifiquement adressé au poste visé ; une feature additive disperserait l'impact du refactor lui-même.
+
+### Trade-offs assumés
+
+- **Pas de façade sur `useStatusStore`** (M3 du passe C). Règle de 3 non atteinte. Commentaire explicite en tête de `stores/status.ts` ligne 7-20 nomme le seuil de révision. Un troisième consumer lisant un subset distinct déclenche la façade. Évite la cérémonie aujourd'hui, garde la discipline réactivable.
+- **Dualité tests `OStationDrawer` .vue + composable** (M4). `OStationDrawer.test.ts` (149 lignes) monte le composant avec `vi.stubGlobal('fetch', ...)` et teste les interactions template (click close, click overlay, Escape, scroll lock), **et** `useStationDrawer.test.ts` (177 lignes) teste le composable en isolation via un probe. Les deux suites testent des intents distincts — template vs logique — mais partagent un chevauchement (~30 % d'assertions sur même surface). Budget-doubled assumé : si une régression apparaît, les deux suites cassent, on a deux signaux. Post-candidature, bascule vers « composable suite canonique + .vue suite minimaliste smoke » est envisagée sans urgence.
+- **Skew `drawerNow` vs `fetchNow`** (m4). `useStationDrawer` snapshot `now` pour l'axe X du chart ; `store.fetchMeasurements` compute son propre `to` / `from`. Écart ~1 s en pratique, invisible à l'œil. Fix impliquerait de passer `from/to` depuis le composable vers le store — API contract change. Scope creep rejeté dans la fenêtre candidature.
+- **`useScrollLock` single-consumer only** (m3). Si deux drawers étaient mountés simultanément, le deuxième capturerait `'hidden'` comme valeur initiale (posée par le premier) et restaurerait incorrectement à la fermeture. AlpiMonitor a un seul drawer ; le commentaire en tête de `useScrollLock.ts` nomme l'hypothèse et pointe la solution (ref-count module-scoped) si multi-drawer devient pertinent.
+- **`VITE_API_BASE_URL` undefined silencieux** (m5). `import.meta.env.VITE_API_BASE_URL` retourne `undefined` en cas d'env var manquante ; `fetch('undefined/stations')` surface comme `{ kind: 'network' }`. POC-acceptable en dev, TODO commenté dans `lib/api-client.ts` pour throw at module load en prod.
+- **Typing test fixture `useI18nList.test.ts`**. `LocaleMessageDictionary<VueMessageType>` de vue-i18n 11 est trop strict pour les payloads mixtes string/array/object que les tests injectent délibérément (edge cases « key resolves to a string, not array »). Cast scoped au boundary `createI18n` (`as unknown as { fr: Record<string, string> }`) avec commentaire documentant le trade-off. Le composable sous test reçoit toujours des traductions typées via `useI18n()` côté prod.
+
+### Process learnings — découverte C1
+
+La passe C (locale, faute de `/ultrareview`) a révélé que `pnpm typecheck` était **silencieusement no-op depuis la migration Storybook**. Le script `"typecheck": "vue-tsc --noEmit"` dans `apps/web/package.json` s'exécutait avec `exit 0` **sans visiter aucun fichier** parce que `tsconfig.json` racine a `files: []` et `tsconfig.app.json` a `composite: true` — sans flag `-p` ou `-b`, `vue-tsc` n'entre dans aucun projet.
+
+Une bascule manuelle vers `vue-tsc --noEmit --project tsconfig.app.json` fait remonter **40 erreurs**, dont 11 attribuables à des patterns refactor (R1 a rendu `ApiError` strict, R3 a introduit `Record<string,...>` indexé avec `noUncheckedIndexedAccess`, les 3 factories de test `makeStation` omettaient `sourcingStatus` requis depuis [ADR-008](https://github.com/sodigitaljeremy/alpimonitor/blob/main/docs/architecture/adr/008-station-sourcing-transparency.md)) et 22 héritées de la migration CSF3 Storybook (`satisfies Meta<typeof C & { label: string }>` silently ignoré, `StatusPatch` résolvant à la function-overload de `$patch` plutôt qu'à l'object-overload, decorator signature trop lâche, TS2742 sur types non portables). R8 fixe les 40.
+
+La remédiation côté stories a migré 8 fichiers (`ABadge`, `AButton`, `OHeroSection`, `OMapSection`, `ASourcingBadge`, `MStatCard`, `MStationCard`, `OHydroChart`) vers des patterns CSF3 désormais canoniques : `Meta<T>` via annotation explicite plutôt que `satisfies typeof Component`, `Decorator` importé de `@storybook/vue3-vite` pour typer le retour des decorators seed, `Partial<$state>` plutôt que `Parameters<$patch>[0]` pour éviter l'overload function, `$patch` invoqué en function-form pour sidesteper le mismatch `DeepPartial`/`Partial`. Ces patterns sont consignés dans `apps/web/STORYBOOK.md` pour servir de référence aux futures stories.
+
+**Leçon retenable** : un gate qui retourne vert n'est pas une preuve qu'il a fonctionné. **Injecter une erreur volontaire pre-commit et vérifier que le gate échoue** est la seule preuve valide. Applicable à `typecheck`, `lint`, `format:check`, `test`, CI, pre-commit hooks. Pour ce projet, ajouter un step smoke dans la CI (« si `pnpm typecheck` exit 0 sans avoir visité au moins N fichiers, fail ») serait une protection mécanique future. Scope post-candidature.
+
+### Process learnings — indisponibilité `/ultrareview`
+
+Le service `/ultrareview` (revue cloud multi-agent tierce, 3 runs gratuits) était prévu comme gate R8 pour obtenir un avis externe structuré. Il a renvoyé 404/502 transitoires pendant 24 h au moment de la session R8. Pivot vers une **passe C locale disciplinée** sur 8 axes documentés dans `docs/refactor/passe-c-findings.md` — même structure (Critical / Major / Minor / Axes propres / Synthèse), même livrable. Les 3 runs gratuits ne sont pas consommés ; ils restent disponibles pour un audit complémentaire post-candidature ou sur une phase future non-critique.
+
+**Leçon retenable** : un outil cloud externe ne peut pas être un gate dur dans une fenêtre contrainte. Concevoir le workflow pour qu'un pivot local soit équivalent en forme (findings structurés, priorisation, trace écrite) et pas juste une béquille de secours. La passe C locale a **révélé C1** — découverte qu'un `/ultrareview` cloud aurait probablement manquée (gate CI vert sur leur côté, pas de signal de script).
+
+## Alternatives écartées
+
+### Ne rien refactorer post-Storybook
+
+- **Bénéfice** : la session R8 libérée pour une feature additive (brush/zoom D3, export CSV, comparateur deux stations).
+- **Coût** : perte du levier « Architect Engineer » explicitement identifié dans la matrice impact/effort de l'audit. Les hypothèses de dette identifiées (god component, store multi-resp, tests absents sur les organisms critiques) auraient continué à pénaliser toute lecture par un relecteur technique senior.
+- **Verdict** : rejeté. Le signal architectural démontré par un diff propre + ADR + règle enforced a un ROI supérieur à une feature marginale, spécifiquement pour un poste Front-End dont l'annonce cite Atomic Design en prérequis.
+
+### Un gros commit monolithique « refactor architecture »
+
+- **Bénéfice** : simplicité du message, un seul hash à mentionner dans CV / ADR.
+- **Coût** : un diff de ~2000 insertions mélangeant relocation + refactor + tests + corrections est illisible en revue. Chaque phase indépendante aurait été non-testable isolément. Un bug introduit en R2 serait indétectable sans le retirer complètement.
+- **Verdict** : rejeté. 7 commits atomiques + 1 R8-fix pré-merge = 7 points de rollback + 7 narrative steps en entretien. Commits atomiques (règle d'engagement feedback `atomic_commits`) imposés par `CLAUDE.md`.
+
+### Trois stores Pinia distincts au lieu d'un store + trois façades
+
+- **Bénéfice** : séparation physique stricte, `useStationsListStore` / `useStationSelectionStore` / `useStationMeasurementsStore` chacun autonome.
+- **Coût** : l'état `stations: StationDTO[]` est partagé par les trois concerns (list affiche, selection filtre, measurements référence). Le dupliquer dans trois singletons demanderait un mécanisme de synchronisation — orchestrateur ou `subscribe()` Pinia entre stores. Complexité disproportionnée vs le gain de séparation.
+- **Verdict** : rejeté. Façades read-only sur un store canonique est le pattern standard Pinia + Vue 3 composables.
+
+### Séparer `/ultrareview` comme dépendance dure de merge main
+
+- **Bénéfice** : signal entretien renforcé (« le code a passé un audit multi-agent externe avant merge »).
+- **Coût** : bloquer le merge sur un service tiers en indisponibilité aurait pu repousser la livraison de plusieurs heures voire jours, dans une fenêtre candidature serrée (deadline 2026-04-30). La passe C locale est techniquement équivalente en forme (findings structurés, priorisation triée).
+- **Verdict** : rejeté. `/ultrareview` reste optionnel, utilisé quand disponible, skippé quand pas, documenté explicitement dans cette ADR (Process learnings).
+
+### Excluder `*.stories.ts` du typecheck via `tsconfig.app.json`
+
+- **Bénéfice** : fix triple instantané (cache C1 + les 22 erreurs Storybook héritées de la migration CSF3 + zéro typing Storybook à maintenir).
+- **Coût** : un relecteur technique senior qui lit `tsconfig.app.json` voit `"exclude": ["**/*.stories.ts"]` et se demande pourquoi. Soit c'est une dette documentée → signal de discipline réduit (« il a masqué plutôt qu'absorbé »). Soit c'est implicite → signal de rigueur réduit. Option 2 de la passe C, évaluée avec timebox 60 min sur Phase B.
+- **Verdict** : rejeté. Option 1 (fix tout) a tenu dans la timebox (35 min de 60) via pattern interface-based pour `label`, `Partial<$state>` pour `$patch`, `Decorator` typé, et annotation `Meta<typeof C>` explicite pour TS2742. Zéro exclude = 0 erreur = narrative candidature plus nette.
+
+## Références
+
+- [`docs/refactor/audit.md`](https://github.com/sodigitaljeremy/alpimonitor/blob/main/docs/refactor/audit.md) — audit de refactor initial (10 hypothèses validées, 4 patterns SkillSwap, budget estimé, ordre de bataille)
+- [`docs/refactor/passe-c-findings.md`](https://github.com/sodigitaljeremy/alpimonitor/blob/main/docs/refactor/passe-c-findings.md) — 10 findings post-refactor (1 Critical / 4 Major / 5 Minor + axes propres + synthèse)
+- [`apps/web/src/composables/stations/index.ts`](https://github.com/sodigitaljeremy/alpimonitor/blob/main/apps/web/src/composables/stations/index.ts) — barrel des 3 façades + `useStationDrawer` orchestrateur
+- [`apps/web/src/lib/api-client.ts`](https://github.com/sodigitaljeremy/alpimonitor/blob/main/apps/web/src/lib/api-client.ts) — centralisation HTTP + union discriminée `ApiError`
+- [`apps/web/src/composables/shared/`](https://github.com/sodigitaljeremy/alpimonitor/tree/main/apps/web/src/composables/shared) — primitives `useEscapeClose`, `useScrollLock`, `usePolling`
+- [`apps/web/src/lib/constants/`](https://github.com/sodigitaljeremy/alpimonitor/tree/main/apps/web/src/lib/constants) — constantes split par domaine (`chart.ts`, `map.ts`, `time.ts`)
+- [`apps/web/package.json`](https://github.com/sodigitaljeremy/alpimonitor/blob/main/apps/web/package.json) — script `typecheck` corrigé (`--project tsconfig.app.json`)
+- [ADR-002](https://github.com/sodigitaljeremy/alpimonitor/blob/main/docs/architecture/adr/002-abem-methodology.md) — parti-pris ABEM, base des préfixes `a-/m-/o-` dans tout le refactor
+- [ADR-007](https://github.com/sodigitaljeremy/alpimonitor/blob/main/docs/architecture/adr/007-lindas-sparql-data-source.md) — `DataSource` (`LIVE`/`RESEARCH`/`SEED`), consommé par `useStationsList`
+- [ADR-008](https://github.com/sodigitaljeremy/alpimonitor/blob/main/docs/architecture/adr/008-station-sourcing-transparency.md) — `sourcingStatus` dont le refactor hérite dans les 3 factories de test (M1)
+- [ADR-009](https://github.com/sodigitaljeremy/alpimonitor/blob/main/docs/architecture/adr/009-storybook-scope.md) — périmètre Storybook (2026-04-23 matin), dont le refactor fixe les typing drifts (22 erreurs Storybook remédiées dans R8)
