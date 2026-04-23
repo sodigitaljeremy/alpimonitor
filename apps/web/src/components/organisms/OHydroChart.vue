@@ -6,7 +6,7 @@ import { timeFormat } from 'd3-time-format';
 import { computed, onMounted, onScopeDispose, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 
-import { computeYDomain, findNearestPointByPx } from './chart-model';
+import { computeYDomain, findNearestPointByPx } from '@/lib/charts/chart-model';
 
 const props = defineProps<{
   series: MeasurementSeries | null;

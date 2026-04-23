@@ -6,7 +6,7 @@ import { useI18n } from 'vue-i18n';
 
 import { useStationsStore } from '@/stores/stations';
 
-import { findLatestDischarge, stationToMarkerOptions } from './station-map-mapping';
+import { findLatestDischarge, stationToMarkerOptions } from '@/lib/map/station-map-mapping';
 
 import 'leaflet/dist/leaflet.css';
 
