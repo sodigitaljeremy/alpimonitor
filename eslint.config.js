@@ -14,6 +14,7 @@ export default tseslint.config(
       '**/build/**',
       '**/coverage/**',
       '**/.vite/**',
+      '**/storybook-static/**',
       'pnpm-lock.yaml',
     ],
   },
