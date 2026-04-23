@@ -1,0 +1,32 @@
+# ---------- Build stage ----------
+FROM node:20-alpine AS build
+
+RUN corepack enable && corepack prepare pnpm@10.33.0 --activate
+
+WORKDIR /app
+
+# Workspace manifests first for layer caching.
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc tsconfig.base.json ./
+COPY packages/shared/package.json ./packages/shared/
+COPY apps/api/package.json ./apps/api/
+COPY apps/web/package.json ./apps/web/
+
+RUN pnpm install --frozen-lockfile --ignore-scripts
+
+COPY packages/shared ./packages/shared
+COPY apps/web ./apps/web
+
+# Storybook stories do not hit the live API (they stub fetches via Pinia
+# decorators), so no VITE_API_BASE_URL build arg is needed here.
+RUN pnpm --filter @alpimonitor/web build-storybook
+
+# ---------- Runtime stage ----------
+FROM nginx:1.27-alpine AS runtime
+
+COPY apps/web/nginx-storybook.conf /etc/nginx/conf.d/default.conf
+COPY apps/web/nginx-storybook-security-headers.conf /etc/nginx/storybook-security-headers.conf
+COPY --from=build /app/apps/web/storybook-static /usr/share/nginx/html
+
+EXPOSE 80
+
+# nginx base image already defines a proper CMD and signal handling.
