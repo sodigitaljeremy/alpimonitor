@@ -6,9 +6,8 @@ import { useI18n } from 'vue-i18n';
 import AIcon from '@/components/atoms/AIcon.vue';
 import MStatusBadge from '@/components/molecules/MStatusBadge.vue';
 import { usePolling } from '@/composables/shared/usePolling';
+import type { BadgeStatus } from '@/lib/status';
 import { useStatusStore } from '@/stores/status';
-
-type BadgeStatus = 'live' | 'stale' | 'offline' | 'loading';
 
 const { t } = useI18n();
 

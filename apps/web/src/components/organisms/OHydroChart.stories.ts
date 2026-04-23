@@ -1,3 +1,5 @@
+import { ONE_DAY_MS } from '@/lib/constants/time';
+
 import OHydroChart from './OHydroChart.vue';
 
 import type { MeasurementSeries } from '@alpimonitor/shared';
@@ -24,7 +26,7 @@ function buildSeries(windowFrom: Date, windowTo: Date, pointCount: number): Meas
 }
 
 const now = new Date();
-const dayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+const dayAgo = new Date(now.getTime() - ONE_DAY_MS);
 
 const meta = {
   title: 'Organisms/OHydroChart',

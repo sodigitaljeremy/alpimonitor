@@ -5,12 +5,11 @@ import { useI18n } from 'vue-i18n';
 import { useEscapeClose } from '@/composables/shared/useEscapeClose';
 import { useScrollLock } from '@/composables/shared/useScrollLock';
 import type { ApiError } from '@/lib/api-client';
+import { ONE_DAY_MS } from '@/lib/constants/time';
 import { stationToHydrodatenUrl } from '@/lib/hydrodaten';
 
 import { useStationMeasurements } from './useStationMeasurements';
 import { useStationSelection } from './useStationSelection';
-
-const CHART_WINDOW_MS = 24 * 60 * 60 * 1000;
 
 export interface UseStationDrawer {
   isOpen: ComputedRef<boolean>;
@@ -58,7 +57,7 @@ export function useStationDrawer(): UseStationDrawer {
   // while the drawer is open. A future auto-refresh feature would
   // reassign `now` on a timer.
   const now: Ref<Date> = ref(new Date());
-  const windowFrom = computed(() => new Date(now.value.getTime() - CHART_WINDOW_MS));
+  const windowFrom = computed(() => new Date(now.value.getTime() - ONE_DAY_MS));
   const windowTo = computed(() => now.value);
 
   watch(selectedStationId, (id) => {

@@ -5,6 +5,7 @@ import { onMounted, onScopeDispose, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import { useStationSelection } from '@/composables/stations';
+import { MAP_CENTER, MAP_ZOOM, MAX_ZOOM } from '@/lib/constants/map';
 import { findLatestDischarge, stationToMarkerOptions } from '@/lib/map/station-map-mapping';
 
 import 'leaflet/dist/leaflet.css';
@@ -13,11 +14,6 @@ const props = defineProps<{ stations: StationDTO[] }>();
 
 const { t } = useI18n();
 const { selectStation } = useStationSelection();
-
-// Rhône valaisan: centered between Brig and Porte du Scex, zoom 10 keeps
-// both the main Rhône corridor and the Val d'Hérens markers in view.
-const MAP_CENTER: L.LatLngTuple = [46.22, 7.4];
-const MAP_ZOOM = 10;
 
 const mapEl = ref<HTMLDivElement | null>(null);
 let map: L.Map | null = null;
@@ -71,7 +67,7 @@ onMounted(() => {
   });
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: t('map.attribution'),
-    maxZoom: 18,
+    maxZoom: MAX_ZOOM,
   }).addTo(map);
   markersLayer = L.layerGroup().addTo(map);
 

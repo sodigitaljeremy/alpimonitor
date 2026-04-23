@@ -1,9 +1,9 @@
 <script setup lang="ts">
-type Status = 'live' | 'stale' | 'offline' | 'loading';
+import type { BadgeStatus } from '@/lib/status';
 
 withDefaults(
   defineProps<{
-    status?: Status;
+    status?: BadgeStatus;
     label: string;
   }>(),
   {

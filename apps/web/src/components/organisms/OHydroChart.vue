@@ -7,6 +7,15 @@ import { computed, onMounted, onScopeDispose, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import { computeYDomain, findNearestPointByPx } from '@/lib/charts/chart-model';
+import {
+  ASPECT_RATIO_WIDTH_MULTIPLIER,
+  DESKTOP_X_TICKS,
+  HEIGHT_MAX,
+  HEIGHT_MIN,
+  MARGIN,
+  NARROW_BREAKPOINT,
+  NARROW_X_TICKS,
+} from '@/lib/constants/chart';
 
 const props = defineProps<{
   series: MeasurementSeries | null;
@@ -15,10 +24,6 @@ const props = defineProps<{
 }>();
 
 const { t } = useI18n();
-
-// Margins are chosen so that a 4-tick y-axis with 2-digit labels fits on
-// the left, and the x-axis has room for "HH:mm" labels without clipping.
-const MARGIN = { top: 16, right: 16, bottom: 28, left: 44 };
 
 const containerEl = ref<HTMLDivElement | null>(null);
 // Defaults match a typical desktop drawer width (~400px after padding).
@@ -66,8 +71,8 @@ const areaPath = computed(() => {
 });
 
 const xTicks = computed(() => {
-  // Fewer ticks below 420px so labels don't collide on mobile.
-  const tickCount = width.value < 420 ? 3 : 6;
+  // Fewer ticks below NARROW_BREAKPOINT so labels don't collide on mobile.
+  const tickCount = width.value < NARROW_BREAKPOINT ? NARROW_X_TICKS : DESKTOP_X_TICKS;
   const fmt = timeFormat('%H:%M');
   return xScale.value.ticks(tickCount).map((d) => ({
     value: d,
@@ -120,7 +125,10 @@ onMounted(() => {
       if (w > 0) {
         width.value = w;
         // Aspect ratio clamped to keep the chart readable across sizes.
-        height.value = Math.min(280, Math.max(180, w * 0.45));
+        height.value = Math.min(
+          HEIGHT_MAX,
+          Math.max(HEIGHT_MIN, w * ASPECT_RATIO_WIDTH_MULTIPLIER)
+        );
       }
     });
     resizeObserver.observe(containerEl.value);

@@ -25,8 +25,9 @@ préfixe du nom de fichier :
   Une card, un header de section, un badge de status.
 - **Organisms** (`o-`) — sections complètes, souvent liées à un store ou à
   une intention UI (hero, carte, drawer).
-- **Templates** — non utilisés à date. L'application est une single-page
-  scrollable, aucun layout répété n'a justifié cette couche.
+- **Templates** (`t-`) — un seul, `TDefaultLayout`, qui enveloppe la page
+  unique avec son footer. L'application étant une single-page scrollable,
+  un layout racine suffit ; la couche est présente sans être démultipliée.
 
 Le nommage CSS suit la convention **ABEM** — bloc préfixé (`m-station-card`),
 element séparé par un double underscore (`m-station-card__name`),

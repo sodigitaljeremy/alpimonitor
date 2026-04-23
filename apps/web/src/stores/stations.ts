@@ -3,8 +3,7 @@ import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
 
 import { api, type ApiError } from '@/lib/api-client';
-
-const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+import { ONE_DAY_MS } from '@/lib/constants/time';
 
 export interface FetchMeasurementsOptions {
   force?: boolean;
