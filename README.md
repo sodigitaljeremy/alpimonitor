@@ -11,6 +11,7 @@ Consomme les données ouvertes de l'Office fédéral de l'environnement (OFEV/BA
 - Application : <https://alpimonitor.fr>
 - API : <https://api.alpimonitor.fr/api/v1/health>
 - Observabilité : <https://api.alpimonitor.fr/api/v1/status>
+- Design system : <https://storybook.alpimonitor.fr> — 46 stories + 5 MDX (Atomic Design catalogue, cf. [ADR-009](./docs/architecture/adr/009-storybook-scope.md))
 
 L'application est déployée en continu via Coolify sur push `main`. Les données affichées sont temps réel — le cron LINDAS agrège les débits du Rhône valaisan toutes les 10 minutes.
 
@@ -29,8 +30,8 @@ _Captures générées automatiquement via [`scripts/screenshots.mjs`](./scripts/
 ## 📊 Faits marquants
 
 - 13 jours de développement pour une candidature CREALP (deadline 30 avril 2026)
-- 130 tests automatisés verts en CI (70 backend + 60 frontend)
-- 7 ADR documentées dont 2 avec drifts d'implémentation assumés
+- 173 tests automatisés verts en CI (71 backend + 102 frontend)
+- 10 ADR documentées dont 2 avec drifts d'implémentation assumés
 - Pivot technique majeur en cours de projet : XML OFEV → LINDAS SPARQL ([ADR-007](./docs/architecture/adr/007-lindas-sparql-data-source.md))
 - Production stable depuis 2026-04-20, ingestion 24/7 sans incident
 - Architecture claire : monorepo pnpm, Atomic Design ABEM, hexagonal API, Docker multi-stage
@@ -103,6 +104,9 @@ Quelques décisions assumées et documentées :
 - **Single-page scrollable plutôt que multi-pages** ([PRD §3.2](./docs/product/prd.md)) — densité d'impression recruteur en moins de 30 secondes.
 - **Tuiles OSM plutôt que swisstopo WMTS** ([ADR-005 drift](./docs/architecture/adr/005-leaflet-for-mapping.md)) — stabilité et zero-cost attribution pour la démo.
 - **Atomic Design ABEM strict** ([ADR-002](./docs/architecture/adr/002-abem-methodology.md)) — préfixes `a-` / `m-` / `o-` / `t-` / `p-` sur 100% des composants Vue.
+- **Transparence du sourcing des stations research** ([ADR-008](./docs/architecture/adr/008-station-sourcing-transparency.md)) — champ `sourcingStatus` orthogonal à `dataSource` distingue `CONFIRMED` (crealp.ch documenté) de `ILLUSTRATIVE` (placement plausible démo).
+- **Storybook exhaustif, exclusions assumées** ([ADR-009](./docs/architecture/adr/009-storybook-scope.md)) — 15 composants présentationnels storyisés ; 3 organisms Pinia + Leaflet + router volontairement exclus pour éviter de mocker l'infra.
+- **Façades feature-grouped + `lib/` domain-scoped** ([ADR-010](./docs/architecture/adr/010-post-refactor-architecture.md)) — pattern post-refactor : `composables/stations/` expose 3 façades read-only, aucun consumer prod n'importe `useStationsStore` directement (règle vérifiée par grep).
 - **Lecture seule, pas d'auth** — l'épopée admin (alertes, seuils, JWT) est volontairement hors scope candidature.
 
 ## 📚 Documentation
@@ -113,12 +117,19 @@ Pour aller plus loin :
 
 - [`docs/context/`](./docs/context/) — contexte métier, CREALP, sources de données
 - [`docs/product/`](./docs/product/) — brief, PRD annoté avec statuts d'implémentation
-- [`docs/architecture/`](./docs/architecture/) — overview C4, schéma Prisma, contrats API, 7 ADR
+- [`docs/architecture/`](./docs/architecture/) — overview C4, schéma Prisma, contrats API, 10 ADR
 - [`docs/ui/`](./docs/ui/) — design system tokens et composants
 - [`docs/runbooks/`](./docs/runbooks/) — post-mortems incidents prod
 - [`docs/workflow/`](./docs/workflow/) — conventions Git, code, commits
 
 Le point d'entrée pour toute session Claude Code est [`CLAUDE.md`](./CLAUDE.md).
+
+## Versioning
+
+Les tags git marquent les phases livrées, à lire dans l'ordre :
+
+- [`v1.0.0-crealp`](https://github.com/sodigitaljeremy/alpimonitor/releases/tag/v1.0.0-crealp) — Livrable candidature initial : landing live, ingestion LINDAS temps réel, 7 stations cartographiées, Lighthouse Desktop 96/100/100/100.
+- [`v1.1.0-refactor`](https://github.com/sodigitaljeremy/alpimonitor/releases/tag/v1.1.0-refactor) — Design system + architecture : Storybook exhaustif (46 stories, cf. [ADR-009](./docs/architecture/adr/009-storybook-scope.md)) et refactor architecture (façades feature-grouped, `lib/` domain-scoped, règle « aucun consumer prod hors façades » enforced, cf. [ADR-010](./docs/architecture/adr/010-post-refactor-architecture.md)).
 
 ## Licence et attributions
 
