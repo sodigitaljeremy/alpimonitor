@@ -1,5 +1,6 @@
 import js from '@eslint/js';
 import eslintConfigPrettier from 'eslint-config-prettier';
+import storybook from 'eslint-plugin-storybook';
 import pluginVue from 'eslint-plugin-vue';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
@@ -13,6 +14,7 @@ export default tseslint.config(
       '**/build/**',
       '**/coverage/**',
       '**/.vite/**',
+      '**/storybook-static/**',
       'pnpm-lock.yaml',
     ],
   },
@@ -73,5 +75,6 @@ export default tseslint.config(
       '@typescript-eslint/no-require-imports': 'off',
     },
   },
-  eslintConfigPrettier
+  eslintConfigPrettier,
+  ...storybook.configs['flat/recommended']
 );

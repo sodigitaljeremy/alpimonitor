@@ -15,3 +15,6 @@ coverage/
 .vite/
 .tsbuildinfo
 **/*.tsbuildinfo
+
+*storybook.log
+storybook-static

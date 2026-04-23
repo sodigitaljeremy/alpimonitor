@@ -1,0 +1,356 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+
+<Meta title="Design System/Typography" />
+
+# Typography
+
+Deux fontes, pas plus. Le choix est reflété dans `tailwind.config.ts` et
+chargé par `index.html` via Google Fonts.
+
+## Familles
+
+<div
+  style={{
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+    gap: '16px',
+    marginBottom: '32px',
+  }}
+>
+  <div
+    style={{
+      padding: '24px',
+      borderRadius: '8px',
+      border: '1px solid rgba(92, 107, 122, 0.2)',
+      background: '#FFFFFF',
+      color: '#1C242C',
+    }}
+  >
+    <div
+      style={{
+        fontFamily: 'JetBrains Mono, monospace',
+        fontSize: '12px',
+        color: '#5C6B7A',
+        marginBottom: '8px',
+      }}
+    >
+      font-sans
+    </div>
+    <div
+      style={{
+        fontFamily: 'Inter, sans-serif',
+        fontSize: '32px',
+        fontWeight: 600,
+        lineHeight: 1.1,
+      }}
+    >
+      Inter
+    </div>
+    <div
+      style={{
+        fontFamily: 'Inter, sans-serif',
+        fontSize: '14px',
+        color: '#5C6B7A',
+        marginTop: '12px',
+        lineHeight: 1.5,
+      }}
+    >
+      Toute l'UI : titres, corps, labels, boutons. Poids utilisés : 400, 500, 600.
+    </div>
+  </div>
+  <div
+    style={{
+      padding: '24px',
+      borderRadius: '8px',
+      border: '1px solid rgba(92, 107, 122, 0.2)',
+      background: '#FFFFFF',
+      color: '#1C242C',
+    }}
+  >
+    <div
+      style={{
+        fontFamily: 'JetBrains Mono, monospace',
+        fontSize: '12px',
+        color: '#5C6B7A',
+        marginBottom: '8px',
+      }}
+    >
+      font-mono
+    </div>
+    <div
+      style={{
+        fontFamily: 'JetBrains Mono, monospace',
+        fontSize: '32px',
+        fontWeight: 500,
+        lineHeight: 1.1,
+      }}
+    >
+      JetBrains Mono
+    </div>
+    <div
+      style={{
+        fontFamily: 'Inter, sans-serif',
+        fontSize: '14px',
+        color: '#5C6B7A',
+        marginTop: '12px',
+        lineHeight: 1.5,
+      }}
+    >
+      Données brutes : tokens SPARQL, ticks d'axe D3, labels de rivière, hex des couleurs, chiffres
+      tabulaires. Poids 400 et 500.
+    </div>
+  </div>
+</div>
+
+## Hiérarchie
+
+Cinq niveaux actifs dans l'application ; aucune page n'en empile plus de trois
+visibles simultanément.
+
+<div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '32px' }}>
+  <div
+    style={{
+      padding: '20px 24px',
+      borderRadius: '8px',
+      border: '1px solid rgba(92, 107, 122, 0.2)',
+      background: '#FFFFFF',
+      color: '#1C242C',
+    }}
+  >
+    <div
+      style={{
+        fontFamily: 'JetBrains Mono, monospace',
+        fontSize: '11px',
+        color: '#5C6B7A',
+        marginBottom: '8px',
+        textTransform: 'uppercase',
+        letterSpacing: '0.15em',
+      }}
+    >
+      text-5xl md:text-7xl — Hero title
+    </div>
+    <div
+      style={{
+        fontFamily: 'Inter, sans-serif',
+        fontSize: '48px',
+        fontWeight: 600,
+        lineHeight: 1.1,
+        color: '#0F2847',
+      }}
+    >
+      AlpiMonitor
+    </div>
+    <div
+      style={{
+        fontFamily: 'Inter, sans-serif',
+        fontSize: '13px',
+        color: '#5C6B7A',
+        marginTop: '8px',
+      }}
+    >
+      Unique occurrence par page. Appliqué au <code>h1</code> du OHeroSection.
+    </div>
+  </div>
+  <div
+    style={{
+      padding: '20px 24px',
+      borderRadius: '8px',
+      border: '1px solid rgba(92, 107, 122, 0.2)',
+      background: '#FFFFFF',
+      color: '#1C242C',
+    }}
+  >
+    <div
+      style={{
+        fontFamily: 'JetBrains Mono, monospace',
+        fontSize: '11px',
+        color: '#5C6B7A',
+        marginBottom: '8px',
+        textTransform: 'uppercase',
+        letterSpacing: '0.15em',
+      }}
+    >
+      text-3xl md:text-4xl — Section title
+    </div>
+    <div
+      style={{
+        fontFamily: 'Inter, sans-serif',
+        fontSize: '32px',
+        fontWeight: 600,
+        lineHeight: 1.2,
+        color: '#0F2847',
+      }}
+    >
+      Le bassin de la Borgne en temps réel
+    </div>
+    <div
+      style={{
+        fontFamily: 'Inter, sans-serif',
+        fontSize: '13px',
+        color: '#5C6B7A',
+        marginTop: '8px',
+      }}
+    >
+      Titre des <code>h2</code> portés par MSectionHeader. Tone <code>light</code> ou{' '}
+      <code>dark</code> selon le fond.
+    </div>
+  </div>
+  <div
+    style={{
+      padding: '20px 24px',
+      borderRadius: '8px',
+      border: '1px solid rgba(92, 107, 122, 0.2)',
+      background: '#FFFFFF',
+      color: '#1C242C',
+    }}
+  >
+    <div
+      style={{
+        fontFamily: 'JetBrains Mono, monospace',
+        fontSize: '11px',
+        color: '#5C6B7A',
+        marginBottom: '8px',
+        textTransform: 'uppercase',
+        letterSpacing: '0.15em',
+      }}
+    >
+      text-xl — Drawer title
+    </div>
+    <div
+      style={{
+        fontFamily: 'Inter, sans-serif',
+        fontSize: '20px',
+        fontWeight: 600,
+        lineHeight: 1.3,
+        color: '#0F2847',
+      }}
+    >
+      Borgne — Bramois
+    </div>
+    <div
+      style={{
+        fontFamily: 'Inter, sans-serif',
+        fontSize: '13px',
+        color: '#5C6B7A',
+        marginTop: '8px',
+      }}
+    >
+      Titre du OStationDrawer. Proche d'une card modal.
+    </div>
+  </div>
+  <div
+    style={{
+      padding: '20px 24px',
+      borderRadius: '8px',
+      border: '1px solid rgba(92, 107, 122, 0.2)',
+      background: '#FFFFFF',
+      color: '#1C242C',
+    }}
+  >
+    <div
+      style={{
+        fontFamily: 'JetBrains Mono, monospace',
+        fontSize: '11px',
+        color: '#5C6B7A',
+        marginBottom: '8px',
+        textTransform: 'uppercase',
+        letterSpacing: '0.15em',
+      }}
+    >
+      text-base — Body
+    </div>
+    <div
+      style={{
+        fontFamily: 'Inter, sans-serif',
+        fontSize: '16px',
+        lineHeight: 1.6,
+        color: '#2C3640',
+      }}
+    >
+      Une phrase de paragraphe standard dans OWhyLindasSection ou OResearchZonesSection. Le rapport
+      ligne-à-texte est volontairement généreux (1.6) pour la lecture longue.
+    </div>
+  </div>
+  <div
+    style={{
+      padding: '20px 24px',
+      borderRadius: '8px',
+      border: '1px solid rgba(92, 107, 122, 0.2)',
+      background: '#FFFFFF',
+      color: '#1C242C',
+    }}
+  >
+    <div
+      style={{
+        fontFamily: 'JetBrains Mono, monospace',
+        fontSize: '11px',
+        color: '#5C6B7A',
+        marginBottom: '8px',
+        textTransform: 'uppercase',
+        letterSpacing: '0.15em',
+      }}
+    >
+      text-xs + mono — Eyebrow / caption
+    </div>
+    <div
+      style={{
+        fontFamily: 'JetBrains Mono, monospace',
+        fontSize: '12px',
+        fontWeight: 500,
+        textTransform: 'uppercase',
+        letterSpacing: '0.25em',
+        color: '#5C6B7A',
+      }}
+    >
+      MONITORING HYDROLOGIQUE DU RHÔNE VALAISAN
+    </div>
+    <div
+      style={{
+        fontFamily: 'Inter, sans-serif',
+        fontSize: '13px',
+        color: '#5C6B7A',
+        marginTop: '8px',
+      }}
+    >
+      Eyebrow au-dessus des titres + river label sur les cards. Letter-spacing élargi (
+      <code>tracking-widest</code>) pour lire comme une étiquette.
+    </div>
+  </div>
+</div>
+
+## Snippet mono en contexte
+
+Le bloc code SPARQL de OWhyLindasSection met JetBrains Mono en scène — les
+mots-clés en `text-primary`, les URI (IRI) aussi pour remonter au-dessus du
+seuil AA contre le fond blanc.
+
+<div
+  style={{
+    padding: '20px',
+    borderRadius: '8px',
+    background: '#FFFFFF',
+    border: '1px solid rgba(92, 107, 122, 0.15)',
+    fontFamily: 'JetBrains Mono, monospace',
+    fontSize: '13px',
+    lineHeight: 1.6,
+  }}
+>
+  <span style={{ color: '#0F2847', fontWeight: 500 }}>PREFIX</span>
+  <span style={{ color: '#2C3640' }}> hg: </span>
+  <span style={{ color: '#0F2847' }}>&lt;https://environment.ld.admin.ch/foen/hydro/&gt;</span>
+  <br />
+  <span style={{ color: '#0F2847', fontWeight: 500 }}>SELECT</span>
+  <span style={{ color: '#2C3640' }}> ?station ?discharge ?measuredAt </span>
+  <span style={{ color: '#0F2847', fontWeight: 500 }}>WHERE</span>
+  <span style={{ color: '#2C3640' }}> {'{ ... }'}</span>
+</div>
+
+## Principes
+
+- **Une fonte par rôle**. Inter pour lire, JetBrains Mono pour lire _du code_
+  ou un nombre. Jamais l'inverse.
+- **Max deux poids visibles par bloc**. 400 régulier et 600 semibold suffisent
+  dans 95% des cas ; 500 est réservé aux labels mono (tracking élargi).
+- **Aucune italique** dans l'UI française. Les titres n'en abusent pas, les
+  paragraphes non plus — l'italique est gardée pour les citations dans les
+  ADR (hors scope UI).

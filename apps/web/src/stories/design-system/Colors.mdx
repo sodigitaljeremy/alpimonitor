@@ -1,0 +1,342 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+
+<Meta title="Design System/Colors" />
+
+# Colors
+
+AlpiMonitor étend la palette Tailwind avec **cinq tokens custom** définis dans
+`apps/web/tailwind.config.ts`. Chaque token sert un rôle précis — sémantique
+(signalétique métier) ou chrome (surfaces, texte, bordures). Une seule
+couleur extérieure à la palette est utilisée, et son emploi est tracé
+dans [ADR-002](https://github.com/sodigitaljeremy/alpimonitor/blob/main/docs/architecture/adr/002-abem-methodology.md) et
+[ADR-008](https://github.com/sodigitaljeremy/alpimonitor/blob/main/docs/architecture/adr/008-station-sourcing-transparency.md).
+
+## Tokens sémantiques
+
+Ces deux couleurs portent un message métier. Elles ne sont pas interchangeables.
+
+<div
+  style={{
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+    gap: '12px',
+    marginBottom: '32px',
+  }}
+>
+  <div
+    style={{
+      background: '#0F2847',
+      color: '#FFFFFF',
+      padding: '24px',
+      borderRadius: '8px',
+      fontFamily: 'JetBrains Mono, monospace',
+    }}
+  >
+    <div style={{ fontSize: '13px', opacity: 0.7, marginBottom: '4px' }}>primary.DEFAULT</div>
+    <div style={{ fontSize: '18px', fontWeight: 600 }}>#0F2847</div>
+    <div
+      style={{
+        fontSize: '12px',
+        opacity: 0.75,
+        marginTop: '12px',
+        fontFamily: 'Inter, sans-serif',
+        lineHeight: 1.5,
+      }}
+    >
+      Navy institutionnel. Signale toute donnée vivante OFEV — titre du hero, bordure MStatCard au
+      hover, variante <code>ABadge.live</code>, fond AButton primary.
+    </div>
+  </div>
+  <div
+    style={{
+      background: '#1A3B66',
+      color: '#FFFFFF',
+      padding: '24px',
+      borderRadius: '8px',
+      fontFamily: 'JetBrains Mono, monospace',
+    }}
+  >
+    <div style={{ fontSize: '13px', opacity: 0.7, marginBottom: '4px' }}>primary.hover</div>
+    <div style={{ fontSize: '18px', fontWeight: 600 }}>#1A3B66</div>
+    <div
+      style={{
+        fontSize: '12px',
+        opacity: 0.75,
+        marginTop: '12px',
+        fontFamily: 'Inter, sans-serif',
+        lineHeight: 1.5,
+      }}
+    >
+      État hover du primary. Pas de focus dédié — <code>:focus-visible</code> utilise la couleur
+      primary + ring (cf. <code>main.css</code>).
+    </div>
+  </div>
+  <div
+    style={{
+      background: '#F4C542',
+      color: '#1C242C',
+      padding: '24px',
+      borderRadius: '8px',
+      fontFamily: 'JetBrains Mono, monospace',
+    }}
+  >
+    <div style={{ fontSize: '13px', opacity: 0.7, marginBottom: '4px' }}>alpine.DEFAULT</div>
+    <div style={{ fontSize: '18px', fontWeight: 600 }}>#F4C542</div>
+    <div
+      style={{
+        fontSize: '12px',
+        opacity: 0.8,
+        marginTop: '12px',
+        fontFamily: 'Inter, sans-serif',
+        lineHeight: 1.5,
+      }}
+    >
+      Doré alpin. Signale le réseau de recherche CREALP — variante <code>ABadge.research</code>,
+      eyebrow OResearchZonesSection, nom des stations en thème dark (fix contraste commit 72c450a).
+    </div>
+  </div>
+  <div
+    style={{
+      background: '#FBE9AD',
+      color: '#1C242C',
+      padding: '24px',
+      borderRadius: '8px',
+      fontFamily: 'JetBrains Mono, monospace',
+    }}
+  >
+    <div style={{ fontSize: '13px', opacity: 0.7, marginBottom: '4px' }}>alpine.soft</div>
+    <div style={{ fontSize: '18px', fontWeight: 600 }}>#FBE9AD</div>
+    <div
+      style={{
+        fontSize: '12px',
+        opacity: 0.8,
+        marginTop: '12px',
+        fontFamily: 'Inter, sans-serif',
+        lineHeight: 1.5,
+      }}
+    >
+      Version adoucie du doré. Réservée aux fonds larges qui auraient été trop saturés en alpine
+      plein — usage marginal à ce jour.
+    </div>
+  </div>
+</div>
+
+## Tokens chrome
+
+Trois couleurs qui structurent les surfaces et le texte, sans porter de signal métier.
+
+<div
+  style={{
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+    gap: '12px',
+    marginBottom: '32px',
+  }}
+>
+  <div
+    style={{
+      background: '#F4F8FB',
+      color: '#1C242C',
+      padding: '24px',
+      borderRadius: '8px',
+      fontFamily: 'JetBrains Mono, monospace',
+      border: '1px solid rgba(92, 107, 122, 0.2)',
+    }}
+  >
+    <div style={{ fontSize: '13px', opacity: 0.7, marginBottom: '4px' }}>glacier.DEFAULT</div>
+    <div style={{ fontSize: '18px', fontWeight: 600 }}>#F4F8FB</div>
+    <div
+      style={{
+        fontSize: '12px',
+        opacity: 0.8,
+        marginTop: '12px',
+        fontFamily: 'Inter, sans-serif',
+        lineHeight: 1.5,
+      }}
+    >
+      Fond clair secondaire. Applique à OHeroSection, OWhyLindasSection, au carré d'icône de
+      MStatCard, et au hover de AButton secondary/ghost.
+    </div>
+  </div>
+  <div
+    style={{
+      background: '#ECF2F7',
+      color: '#1C242C',
+      padding: '24px',
+      borderRadius: '8px',
+      fontFamily: 'JetBrains Mono, monospace',
+      border: '1px solid rgba(92, 107, 122, 0.2)',
+    }}
+  >
+    <div style={{ fontSize: '13px', opacity: 0.7, marginBottom: '4px' }}>glacier.soft</div>
+    <div style={{ fontSize: '18px', fontWeight: 600 }}>#ECF2F7</div>
+    <div
+      style={{
+        fontSize: '12px',
+        opacity: 0.8,
+        marginTop: '12px',
+        fontFamily: 'Inter, sans-serif',
+        lineHeight: 1.5,
+      }}
+    >
+      Variante plus posée du glacier. Disponible mais peu employée aujourd'hui ; vocation à
+      différencier deux niveaux de fond quand la section l'exigera.
+    </div>
+  </div>
+  <div
+    style={{
+      background: '#5C6B7A',
+      color: '#FFFFFF',
+      padding: '24px',
+      borderRadius: '8px',
+      fontFamily: 'JetBrains Mono, monospace',
+    }}
+  >
+    <div style={{ fontSize: '13px', opacity: 0.7, marginBottom: '4px' }}>slate.alpi</div>
+    <div style={{ fontSize: '18px', fontWeight: 600 }}>#5C6B7A</div>
+    <div
+      style={{
+        fontSize: '12px',
+        opacity: 0.85,
+        marginTop: '12px',
+        fontFamily: 'Inter, sans-serif',
+        lineHeight: 1.5,
+      }}
+    >
+      Gris-bleu. Porte tout le texte secondaire (hint de card, rivière de station, copyright) et les
+      bordures soft — <code>border-slate-alpi/20</code> est le pattern récurrent.
+    </div>
+  </div>
+  <div
+    style={{
+      background: '#2C3640',
+      color: '#FFFFFF',
+      padding: '24px',
+      borderRadius: '8px',
+      fontFamily: 'JetBrains Mono, monospace',
+    }}
+  >
+    <div style={{ fontSize: '13px', opacity: 0.7, marginBottom: '4px' }}>graphite.DEFAULT</div>
+    <div style={{ fontSize: '18px', fontWeight: 600 }}>#2C3640</div>
+    <div
+      style={{
+        fontSize: '12px',
+        opacity: 0.85,
+        marginTop: '12px',
+        fontFamily: 'Inter, sans-serif',
+        lineHeight: 1.5,
+      }}
+    >
+      Fond de OResearchZonesSection en entier. Porte aussi le texte body par défaut (via{' '}
+      <code>body</code> dans <code>main.css</code>).
+    </div>
+  </div>
+  <div
+    style={{
+      background: '#1C242C',
+      color: '#FFFFFF',
+      padding: '24px',
+      borderRadius: '8px',
+      fontFamily: 'JetBrains Mono, monospace',
+    }}
+  >
+    <div style={{ fontSize: '13px', opacity: 0.7, marginBottom: '4px' }}>graphite.strong</div>
+    <div style={{ fontSize: '18px', fontWeight: 600 }}>#1C242C</div>
+    <div
+      style={{
+        fontSize: '12px',
+        opacity: 0.85,
+        marginTop: '12px',
+        fontFamily: 'Inter, sans-serif',
+        lineHeight: 1.5,
+      }}
+    >
+      Version plus dense du graphite. Utilisée par la tooltip ASourcingBadge — contraste emerald-300{' '}
+      <em>vs</em> graphite-strong ≈ 8:1, WCAG AA largement passé.
+    </div>
+  </div>
+</div>
+
+## Une couleur Tailwind default utilisée : emerald
+
+[ADR-008](https://github.com/sodigitaljeremy/alpimonitor/blob/main/docs/architecture/adr/008-station-sourcing-transparency.md)
+introduit un badge `ASourcingBadge` à deux états. Plutôt que d'ajouter un
+sixième token custom pour un seul atom, la décision a été d'utiliser la
+palette `emerald` fournie par Tailwind pour l'état `CONFIRMED` — l'alpine
+était déjà pris par la sémantique RESEARCH, et orthogonaliser les deux
+signaux évite qu'un lecteur confonde "station recherche" et "station
+documentée".
+
+<div
+  style={{
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+    gap: '12px',
+    marginBottom: '32px',
+  }}
+>
+  <div
+    style={{
+      background: '#6EE7B7',
+      color: '#1C242C',
+      padding: '24px',
+      borderRadius: '8px',
+      fontFamily: 'JetBrains Mono, monospace',
+    }}
+  >
+    <div style={{ fontSize: '13px', opacity: 0.7, marginBottom: '4px' }}>
+      emerald-300 (Tailwind default)
+    </div>
+    <div style={{ fontSize: '18px', fontWeight: 600 }}>#6EE7B7</div>
+    <div
+      style={{
+        fontSize: '12px',
+        opacity: 0.85,
+        marginTop: '12px',
+        fontFamily: 'Inter, sans-serif',
+        lineHeight: 1.5,
+      }}
+    >
+      Texte de <code>ASourcingBadge.CONFIRMED</code> sur fond graphite dark.
+    </div>
+  </div>
+  <div
+    style={{
+      background: '#34D399',
+      color: '#1C242C',
+      padding: '24px',
+      borderRadius: '8px',
+      fontFamily: 'JetBrains Mono, monospace',
+    }}
+  >
+    <div style={{ fontSize: '13px', opacity: 0.7, marginBottom: '4px' }}>
+      emerald-400 (Tailwind default)
+    </div>
+    <div style={{ fontSize: '18px', fontWeight: 600 }}>#34D399</div>
+    <div
+      style={{
+        fontSize: '12px',
+        opacity: 0.85,
+        marginTop: '12px',
+        fontFamily: 'Inter, sans-serif',
+        lineHeight: 1.5,
+      }}
+    >
+      Bordure <code>/40</code> + fond <code>/15</code> du badge CONFIRMED.
+    </div>
+  </div>
+</div>
+
+## Contraste et a11y
+
+Un audit axe-core en fin de J13 (cf. commit `72c450a`) a remonté deux
+contrastes sous WCAG AA :
+
+- Les tokens SPARQL URI de `OWhyLindasSection` affichés en `text-alpine` sur
+  fond blanc tombaient à 1.62:1. La correction passe par `text-primary` qui
+  monte à 13.4:1, sans ajouter de token de lien dédié.
+- Le texte des cartes research en thème dark rendait en `text-graphite` sur
+  un composite `bg-white/5` → 1.43:1. Le fix utilise `text-alpine` qui est
+  déjà le token RESEARCH (5.85:1, AA).
+
+Ces ajustements n'ont ajouté aucune couleur à la palette.

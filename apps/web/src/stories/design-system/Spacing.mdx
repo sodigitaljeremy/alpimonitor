@@ -1,0 +1,124 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+
+<Meta title="Design System/Spacing" />
+
+# Spacing
+
+AlpiMonitor utilise l'échelle Tailwind par défaut (4px × multiplicateur). Aucun
+token d'espacement custom n'a été ajouté — l'inertie des valeurs `1`, `2`, `4`,
+`6`, `8` reste suffisante pour rythmer une seule page scrollable.
+
+## Échelle utilisée
+
+Seules les valeurs listées ci-dessous apparaissent dans `apps/web/src`. Les
+multiplicateurs absents ne sont pas interdits ; ils n'ont juste pas eu de
+cas d'usage à date.
+
+<div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '32px' }}>
+  {[
+    { token: '0.5', px: 2, usage: 'quasi jamais — garde-fou, pas employé' },
+    { token: '1', px: 4, usage: 'micro-gaps (icône + label de lien footer)' },
+    { token: '1.5', px: 6, usage: 'gap ABadge entre icône et texte' },
+    { token: '2', px: 8, usage: 'gaps internes MStatusBadge, AButton' },
+    { token: '2.5', px: 10, usage: 'padding horizontal ABadge pill' },
+    { token: '3', px: 12, usage: 'padding horizontal MStatusBadge' },
+    { token: '4', px: 16, usage: 'gap standard entre éléments de card' },
+    { token: '5', px: 20, usage: 'padding MStationCard' },
+    { token: '6', px: 24, usage: 'padding desktop sections (px-6)' },
+    { token: '8', px: 32, usage: 'gap between MStationCard blocks' },
+    { token: '10', px: 40, usage: 'padding tablette sections (md:px-10)' },
+    { token: '14', px: 56, usage: 'py-14 footer inner' },
+    { token: '16', px: 64, usage: 'py-16 sections light' },
+    { token: '20', px: 80, usage: 'py-20 OWhyLindasSection' },
+    { token: '24', px: 96, usage: 'py-24 OMapSection + OResearchZones desktop' },
+  ].map(({ token, px, usage }) => (
+    <div
+      key={token}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '16px',
+        padding: '8px 0',
+        borderBottom: '1px solid rgba(92, 107, 122, 0.1)',
+      }}
+    >
+      <code
+        style={{
+          fontFamily: 'JetBrains Mono, monospace',
+          fontSize: '12px',
+          color: '#0F2847',
+          minWidth: '48px',
+          fontWeight: 500,
+        }}
+      >
+        {token}
+      </code>
+      <code
+        style={{
+          fontFamily: 'JetBrains Mono, monospace',
+          fontSize: '12px',
+          color: '#5C6B7A',
+          minWidth: '64px',
+        }}
+      >
+        {px}px
+      </code>
+      <div
+        style={{
+          height: '16px',
+          background: '#0F2847',
+          borderRadius: '2px',
+          width: `${Math.max(2, px)}px`,
+        }}
+      />
+      <span style={{ fontFamily: 'Inter, sans-serif', fontSize: '13px', color: '#2C3640' }}>
+        {usage}
+      </span>
+    </div>
+  ))}
+</div>
+
+## Rythme vertical des sections
+
+Une section scrollable a une respiration verticale systématisée. Plus le
+contenu est dense (tableaux, cards), plus le padding monte.
+
+| Section               | Padding vertical desktop   | Pourquoi                                                              |
+| --------------------- | -------------------------- | --------------------------------------------------------------------- |
+| OHeroSection          | `py-10 md:py-16` via inner | Il occupe la viewport entière, le padding est absorbé par la hauteur. |
+| OMapSection           | `py-16 md:py-24`           | Carte + légende, espace respirable autour du cadre.                   |
+| OWhyLindasSection     | `py-20`                    | Texte + snippet code, rythme intermédiaire.                           |
+| OResearchZonesSection | `py-24`                    | Trois cards dark + paragraphes — la plus longue section.              |
+| OSiteFooter           | `py-14`                    | Fin de page, ne doit pas surcharger.                                  |
+
+## Containers
+
+Tous les containers sont centrés via `mx-auto` et capés en largeur via les
+tokens `max-w-*`. Seuls trois ont été activés :
+
+- **`max-w-2xl`** (42rem / 672px) — utilisé pour les paragraphes de prose
+  dans `MSectionHeader__subtitle` afin de garder une longueur de ligne
+  confortable à la lecture.
+- **`max-w-5xl`** (64rem / 1024px) — inner de OHeroSection et
+  OWhyLindasSection, sections narratives plutôt compactes.
+- **`max-w-6xl`** (72rem / 1152px) — inner de OMapSection, OResearchZonesSection,
+  OSiteFooter. C'est le largeur "reference" du produit.
+
+Aucune section n'utilise `max-w-7xl` ou `max-w-full`.
+
+## Breakpoints
+
+Le projet utilise les breakpoints Tailwind standards mais n'active en
+pratique que deux d'entre eux :
+
+- **`md` (768px)** — pivot principal. La majorité des layouts passent d'une
+  colonne à deux ou trois à partir de `md`.
+- **`sm` (640px)** — utilisé marginalement (légende de la carte, quelques
+  grilles d'icônes dans Storybook).
+- **`lg` / `xl` / `2xl`** — jamais déclenchés à date. Le contenu reste
+  lisible au-delà sans nouveau breakpoint.
+
+Une valeur pixel hardcodée apparaît dans `OHydroChart.vue` : `width < 420`
+active une densité réduite de ticks horizontaux. Cette borne est posée en
+JS plutôt qu'en CSS parce qu'elle pilote un calcul D3, pas une règle de
+layout.
