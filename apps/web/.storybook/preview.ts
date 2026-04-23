@@ -33,6 +33,17 @@ const preview: Preview = {
     a11y: {
       test: 'todo',
     },
+    options: {
+      storySort: {
+        order: [
+          'Design System',
+          ['Introduction', 'Colors', 'Typography', 'Spacing', 'Icons'],
+          'Atoms',
+          'Molecules',
+          'Organisms',
+        ],
+      },
+    },
   },
   initialGlobals: {
     backgrounds: { value: 'light' },

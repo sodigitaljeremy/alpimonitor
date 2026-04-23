@@ -1,0 +1,64 @@
+import { Meta, Canvas } from '@storybook/addon-docs/blocks';
+import * as AIconStories from '../../components/atoms/AIcon.stories';
+
+<Meta title="Design System/Icons" />
+
+# Icons
+
+Le composant `AIcon` expose onze SVG inline, dessinés à la main et homogènes
+en style : trait 1.75, arrondis sur les extrémités, viewBox 24×24, couleur
+héritée via `currentColor`. Aucune dépendance externe (pas de Lucide, Heroicons,
+Material Icons) — la bibliothèque tient en un seul fichier versionné.
+
+## Galerie
+
+La story ci-dessous est la même que `Atoms/AIcon > Gallery`. Elle rend les
+onze icônes dans leur état par défaut (24px, couleur primary).
+
+<Canvas of={AIconStories.Gallery} />
+
+## Catalogue et usages réels
+
+Chaque valeur de la prop `name` est exhaustive : le type TypeScript est un
+union littéral, donc toute faute de frappe est rattrapée à la compilation.
+
+| `name`       | Usage principal                                                                                                                     |
+| ------------ | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `station`    | Icône de `MStatCard` (variante "Stations suivies") et référencé par le mapping des marqueurs Leaflet dans `station-map-mapping.ts`. |
+| `clock`      | `MStatCard` variante "Dernière ingestion" — indique la fraîcheur de la donnée.                                                      |
+| `chart`      | `MStatCard` variante "Variation 24h" — signale une série temporelle.                                                                |
+| `signal`     | `MStatCard` variante "Débit" — trait ondulatoire rappelant un flux.                                                                 |
+| `arrow-down` | Bouton "Découvrir" de `OHeroSection` qui scrolle vers la section carte.                                                             |
+| `external`   | Liens sortants de `OSiteFooter` (GitHub, ADR, LinkedIn) + lien vers la source OFEV dans `OStationDrawer`.                           |
+| `github`     | Lien du dépôt dans `OSiteFooter`.                                                                                                   |
+| `linkedin`   | Lien profil auteur dans `OSiteFooter`.                                                                                              |
+| `close`      | Bouton de fermeture du `OStationDrawer`.                                                                                            |
+| `check`      | Icône de `ASourcingBadge` pour le statut `CONFIRMED` (source officielle CREALP).                                                    |
+| `info`       | Icône de `ASourcingBadge` pour le statut `ILLUSTRATIVE` (emplacement plausible démo).                                               |
+
+## Props
+
+- **`name`** — obligatoire, union littéral de onze valeurs.
+- **`size`** — facultatif, nombre en pixels. Défaut 24. Appliqué à la fois
+  en `width` et `height` ; pas de ratio non-uniforme supporté.
+
+Le composant ne reçoit ni `color` ni `stroke-width` : ces deux aspects sont
+pilotés par la classe utilitaire Tailwind appliquée au parent
+(`text-primary` se propage via `currentColor`, stroke 1.75 fait partie du
+contrat visuel).
+
+## Conventions
+
+- `stroke="currentColor"`, `fill="none"` par défaut — les SVG répondent
+  à la couleur du contexte.
+- `aria-hidden="true"` et `focusable="false"` sont posés en dur : les icônes
+  servent toujours une intention visuelle accompagnée de texte (ou
+  d'`aria-label` sur le parent cliquable). Une icône seule ne communique
+  jamais.
+- Deux exceptions au trait-seul : `signal` et `linkedin` ont un `circle` ou
+  `rect` en `fill="currentColor"` — c'était indispensable pour que la forme
+  reste lisible à 16px.
+
+Ajouter une icône consiste à ouvrir `AIcon.vue`, étendre le type `Name` et
+ajouter un `<template v-else-if>`. L'autodoc de la story se met à jour
+automatiquement.

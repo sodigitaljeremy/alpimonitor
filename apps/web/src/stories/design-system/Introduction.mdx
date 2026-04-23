@@ -1,0 +1,99 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+
+<Meta title="Design System/Introduction" />
+
+# Design System AlpiMonitor
+
+AlpiMonitor est un tableau de bord hydrologique du bassin de la Borgne,
+développé en treize jours pour la candidature au poste de développeur·se
+front-end au [CREALP](https://www.crealp.ch). La version 1.0.0-crealp est
+déployée sur [alpimonitor.fr](https://alpimonitor.fr).
+
+Ce Storybook est posé dans une branche `feature/storybook` qui enrichit le
+produit **après** le tag de candidature. Il ne fait pas partie du livrable
+principal ; il documente le design system que l'application a construit en
+chemin.
+
+## Philosophie
+
+Le projet suit un découpage Atomic Design strict, verrouillé par le
+préfixe du nom de fichier :
+
+- **Atoms** (`a-`) — primitives visuelles sans logique métier. Un badge,
+  un bouton, une icône, une valeur numérique.
+- **Molecules** (`m-`) — assemblages courts qui composent atoms + atoms.
+  Une card, un header de section, un badge de status.
+- **Organisms** (`o-`) — sections complètes, souvent liées à un store ou à
+  une intention UI (hero, carte, drawer).
+- **Templates** — non utilisés à date. L'application est une single-page
+  scrollable, aucun layout répété n'a justifié cette couche.
+
+Le nommage CSS suit la convention **ABEM** — bloc préfixé (`m-station-card`),
+element séparé par un double underscore (`m-station-card__name`),
+modifier en double tiret (`m-station-card--theme-dark`). La convention est
+formalisée dans [ADR-002](https://github.com/sodigitaljeremy/alpimonitor/blob/main/docs/architecture/adr/002-abem-methodology.md).
+Elle maintient un espace de noms plat malgré Tailwind ; `@apply` reste
+confiné dans le `<style scoped>` de chaque composant.
+
+## Ce que ce Storybook couvre
+
+Quinze composants présentationnels disposent d'au minimum deux stories
+chacun :
+
+- **5 atoms** — ABadge, AButton, AIcon, ANumericValue, ASourcingBadge.
+- **4 molecules** — MSectionHeader, MStatCard, MStationCard, MStatusBadge.
+- **6 organisms présentationnels** — OHeroSection, OHydroChart, OMapSection
+  (états non-heureux uniquement), OResearchZonesSection, OSiteFooter,
+  OWhyLindasSection.
+
+Cinq pages MDX — dont celle-ci — cadrent la grammaire visuelle.
+
+## Ce que ce Storybook n'inclut pas
+
+Trois organisms sont exclus, chacun pour une raison précise :
+
+- **OKeyMetricsSection** — lit un store Pinia, fait un fetch live. Monter
+  une story représentative exigerait de mocker le backend API ; le gain
+  de signal est inférieur à la dette d'outillage pour la fenêtre
+  candidature.
+- **OStationDrawer** — couple routeur Vue + store + OHydroChart. Ses
+  stories utiles demanderaient une navigation simulée ; l'investissement
+  en wrapper est hors scope.
+- **OStationMap** — dépend de Leaflet, d'une `ResizeObserver` et d'une
+  carte live. Le boot-up n'a pas de valeur pédagogique dans un canvas
+  Storybook isolé.
+
+Ces choix sont actés dans **ADR-009** (à venir, Phase 6 de cette branche).
+Ils ne signifient pas que ces composants sont moins importants — ils sont
+au contraire le cœur interactif du produit — mais leur valeur se mesure
+dans l'intégration, pas dans le catalogue isolé.
+
+## Décisions techniques référencées
+
+Ce design system est le résultat direct de plusieurs décisions techniques
+consignées en ADR. Celles qui ont un impact visuel ou structurel :
+
+- **[ADR-001](https://github.com/sodigitaljeremy/alpimonitor/blob/main/docs/architecture/adr/001-typescript-monostack.md)**
+  — TypeScript partout, pas de Python ni de ML embarqué.
+- **[ADR-002](https://github.com/sodigitaljeremy/alpimonitor/blob/main/docs/architecture/adr/002-abem-methodology.md)**
+  — ABEM + Tailwind en `@apply`, pas de `:class` dynamiques arbitraires.
+- **[ADR-005](https://github.com/sodigitaljeremy/alpimonitor/blob/main/docs/architecture/adr/005-leaflet-for-mapping.md)**
+  — Leaflet pour la carte (explique l'exclusion d'OStationMap en Storybook).
+- **[ADR-006](https://github.com/sodigitaljeremy/alpimonitor/blob/main/docs/architecture/adr/006-d3-vanilla.md)**
+  — D3 modules uniquement (`d3-scale`, `d3-shape`, `d3-time-format`),
+  pas de lib chart haut-niveau.
+- **[ADR-007](https://github.com/sodigitaljeremy/alpimonitor/blob/main/docs/architecture/adr/007-lindas-sparql-data-source.md)**
+  — Pivot vers SPARQL LINDAS après la dépréciation du flux XML OFEV. Sert
+  d'angle narratif à OWhyLindasSection.
+- **[ADR-008](https://github.com/sodigitaljeremy/alpimonitor/blob/main/docs/architecture/adr/008-station-sourcing-transparency.md)**
+  — Distinction `CONFIRMED` / `ILLUSTRATIVE` sur les stations research.
+  Sert de déclencheur à l'atom `ASourcingBadge` et à l'audit factuel qui
+  apparaît dans MStationCard.
+- **ADR-009** — Périmètre Storybook (à rédiger Phase 6).
+
+## Parcours suggéré
+
+Pour le lecteur qui découvre : commencer par **Colors**, puis **Typography**,
+puis regarder **Atoms → Molecules → Organisms** dans cet ordre. La
+composition remonte naturellement l'Atomic Design et évite de tomber sur
+un organism complexe avant d'avoir vu les primitives qu'il utilise.
