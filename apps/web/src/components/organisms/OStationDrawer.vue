@@ -1,109 +1,47 @@
 <script setup lang="ts">
-import type { MeasurementSeries } from '@alpimonitor/shared';
-import { useEventListener } from '@vueuse/core';
-import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import AIcon from '@/components/atoms/AIcon.vue';
 import OHydroChart from '@/components/organisms/OHydroChart.vue';
-import { useStationMeasurements, useStationSelection } from '@/composables/stations';
+import { useStationDrawer } from '@/composables/stations';
 
 const { t } = useI18n();
 
-const { selectedStation, selectedStationId, clearSelection } = useStationSelection();
 const {
-  series: allSeries,
+  isOpen,
+  station,
+  dischargeSeries,
   isLoading,
   error: fetchError,
-  load,
-  reload,
-} = useStationMeasurements(selectedStationId);
-
-const isOpen = computed(() => selectedStationId.value !== null);
-
-const now = ref(new Date());
-const windowFrom = computed(() => new Date(now.value.getTime() - 24 * 60 * 60 * 1000));
-
-// Fetch when the selection changes; "now" is snapshotted at selection
-// time so the chart window is stable while the drawer is open. A future
-// "auto-refresh" feature can reassign `now` on a timer.
-watch(selectedStationId, (id) => {
-  if (id === null) return;
-  now.value = new Date();
-  void load();
-});
-
-const dischargeSeries = computed<MeasurementSeries | null>(() => {
-  const series = allSeries.value;
-  if (!series) return null;
-  return series.find((s) => s.parameter === 'DISCHARGE') ?? null;
-});
-
-function close(): void {
-  clearSelection();
-}
-
-function retry(): void {
-  void reload();
-}
-
-// Escape closes. useEventListener auto-disposes with the scope, so no
-// manual cleanup needed.
-useEventListener(window, 'keydown', (evt: KeyboardEvent) => {
-  if (evt.key === 'Escape' && isOpen.value) close();
-});
-
-// Scroll lock while the drawer is open. Done via inline style on body so
-// we don't fight any existing overflow rule in the cascade. `immediate`
-// ensures that if the drawer mounts with a station already selected
-// (route hydration, deep-link) the lock applies straight away.
-watch(
-  isOpen,
-  (open) => {
-    if (typeof document === 'undefined') return;
-    document.body.style.overflow = open ? 'hidden' : '';
-  },
-  { immediate: true }
-);
-
-const hydrodatenUrl = computed(() => {
-  const station = selectedStation.value;
-  if (!station) return null;
-  // TBD codes mark CREALP research stations — no federal page to link to.
-  if (station.ofevCode.startsWith('TBD')) return null;
-  return `https://www.hydrodaten.admin.ch/fr/${station.ofevCode}.html`;
-});
-
-const coordsLabel = computed(() => {
-  const station = selectedStation.value;
-  if (!station) return '';
-  return t('drawer.coords', {
-    lat: station.latitude.toFixed(4),
-    lng: station.longitude.toFixed(4),
-  });
-});
+  windowFrom,
+  windowTo,
+  close,
+  retry,
+  coordsLabel,
+  hydrodatenUrl,
+} = useStationDrawer();
 </script>
 
 <template>
   <Teleport to="body">
     <Transition name="o-station-drawer">
       <div
-        v-if="isOpen && selectedStation"
+        v-if="isOpen && station"
         class="o-station-drawer"
         role="dialog"
         aria-modal="true"
-        :aria-label="selectedStation.name"
+        :aria-label="station.name"
       >
         <div class="o-station-drawer__overlay" @click="close" />
 
         <aside class="o-station-drawer__panel">
           <header class="o-station-drawer__header">
             <div class="o-station-drawer__title-block">
-              <h3 class="o-station-drawer__title">{{ selectedStation.name }}</h3>
+              <h3 class="o-station-drawer__title">{{ station.name }}</h3>
               <p class="o-station-drawer__subtitle">
-                <span class="o-station-drawer__ofev-code">{{ selectedStation.ofevCode }}</span>
+                <span class="o-station-drawer__ofev-code">{{ station.ofevCode }}</span>
                 <span aria-hidden="true"> · </span>
-                <span>{{ selectedStation.riverName }}</span>
+                <span>{{ station.riverName }}</span>
               </p>
               <p class="o-station-drawer__coords">{{ coordsLabel }}</p>
             </div>
@@ -135,7 +73,7 @@ const coordsLabel = computed(() => {
               v-else
               :series="dischargeSeries"
               :window-from="windowFrom"
-              :window-to="now"
+              :window-to="windowTo"
             />
           </section>
 
