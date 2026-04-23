@@ -11,7 +11,12 @@ export interface FetchMeasurementsOptions {
 }
 
 export const useStationsStore = defineStore('stations', () => {
-  const items = ref<StationDTO[]>([]);
+  // Single source of truth for the list. Named `stations` rather than a
+  // private `items` + public `stations` computed alias — the two-name
+  // pattern added no encapsulation (a writable ref is still reachable via
+  // the proxy) and blocked `$patch({ stations: [...] })` from test and
+  // Storybook setup code.
+  const stations = ref<StationDTO[]>([]);
   const loading = ref(false);
   const error = ref<ApiError | null>(null);
   // Distinguishes "fetch never returned yet" (show placeholder) from
@@ -27,12 +32,10 @@ export const useStationsStore = defineStore('stations', () => {
 
   const selectedStationId = ref<string | null>(null);
 
-  const stations = computed<StationDTO[]>(() => items.value);
-
   const selectedStation = computed<StationDTO | null>(() => {
     const id = selectedStationId.value;
     if (id === null) return null;
-    return items.value.find((s) => s.id === id) ?? null;
+    return stations.value.find((s) => s.id === id) ?? null;
   });
 
   async function fetchStations(): Promise<void> {
@@ -40,7 +43,7 @@ export const useStationsStore = defineStore('stations', () => {
     error.value = null;
     const result = await api.getStations();
     if (result.success) {
-      items.value = result.data.data;
+      stations.value = result.data.data;
       hasLoadedOnce.value = true;
     } else {
       error.value = result.error;

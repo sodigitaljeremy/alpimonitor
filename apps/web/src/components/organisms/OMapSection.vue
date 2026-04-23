@@ -1,16 +1,14 @@
 <script setup lang="ts">
-import { storeToRefs } from 'pinia';
 import { computed, onMounted } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import MSectionHeader from '@/components/molecules/MSectionHeader.vue';
 import OStationMap from '@/components/organisms/OStationMap.vue';
-import { useStationsStore } from '@/stores/stations';
+import { useStationsList } from '@/composables/stations';
 
 const { t } = useI18n();
 
-const stationsStore = useStationsStore();
-const { stations, hasLoadedOnce, error } = storeToRefs(stationsStore);
+const { stations, hasLoadedOnce, error, loadAll } = useStationsList();
 
 // The placeholder stays visible until the first response lands. After that,
 // OStationMap takes over — even when the list is empty we still want the
@@ -18,7 +16,7 @@ const { stations, hasLoadedOnce, error } = storeToRefs(stationsStore);
 const showMap = computed(() => hasLoadedOnce.value && error.value === null);
 
 onMounted(() => {
-  void stationsStore.fetchStations();
+  void loadAll();
 });
 </script>
 

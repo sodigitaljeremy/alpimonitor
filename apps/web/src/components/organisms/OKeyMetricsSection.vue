@@ -5,21 +5,20 @@ import { useI18n } from 'vue-i18n';
 
 import MSectionHeader from '@/components/molecules/MSectionHeader.vue';
 import MStatCard from '@/components/molecules/MStatCard.vue';
-import { useStationsStore } from '@/stores/stations';
+import { useStationsList } from '@/composables/stations';
 import { useStatusStore } from '@/stores/status';
 import { formatMinutesAgo } from '@/utils/relativeTime';
 
 const { t } = useI18n();
 
-// Both stores are already instantiated and fetched by OHeroSection (status)
-// and OMapSection (stations), which mount earlier in the page. Re-using the
-// Pinia singletons here is free — no duplicate network calls — and the
-// computeds below react to the same refs.
+// Both reactive sources are already populated by OHeroSection (status)
+// and OMapSection (stations), which mount earlier in the page. Re-using
+// the Pinia singleton + the stations facade here is free — no duplicate
+// network calls — and the computeds below react to the same refs.
 const statusStore = useStatusStore();
-const stationsStore = useStationsStore();
-
 const { hasLoadedOnce: statusLoaded, today, minutesSinceLastSuccess } = storeToRefs(statusStore);
-const { hasLoadedOnce: stationsLoaded, stations } = storeToRefs(stationsStore);
+
+const { stations, hasLoadedOnce: stationsLoaded } = useStationsList();
 
 const placeholder = computed(() => t('keyMetrics.placeholder'));
 

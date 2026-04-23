@@ -4,8 +4,7 @@ import L from 'leaflet';
 import { onMounted, onScopeDispose, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 
-import { useStationsStore } from '@/stores/stations';
-
+import { useStationSelection } from '@/composables/stations';
 import { findLatestDischarge, stationToMarkerOptions } from '@/lib/map/station-map-mapping';
 
 import 'leaflet/dist/leaflet.css';
@@ -13,7 +12,7 @@ import 'leaflet/dist/leaflet.css';
 const props = defineProps<{ stations: StationDTO[] }>();
 
 const { t } = useI18n();
-const stationsStore = useStationsStore();
+const { selectStation } = useStationSelection();
 
 // Rhône valaisan: centered between Brig and Porte du Scex, zoom 10 keeps
 // both the main Rhône corridor and the Val d'Hérens markers in view.
@@ -54,7 +53,7 @@ function renderMarkers(stations: StationDTO[]): void {
           : station.name;
       marker.bindTooltip(tooltip, { direction: 'top', offset: [0, -8] });
       marker.on('click', () => {
-        stationsStore.selectStation(station.id);
+        selectStation(station.id);
       });
     } else {
       marker.bindPopup(buildResearchPopupHtml(station));

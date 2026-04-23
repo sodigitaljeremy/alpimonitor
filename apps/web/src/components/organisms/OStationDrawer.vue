@@ -1,25 +1,23 @@
 <script setup lang="ts">
 import type { MeasurementSeries } from '@alpimonitor/shared';
 import { useEventListener } from '@vueuse/core';
-import { storeToRefs } from 'pinia';
 import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import AIcon from '@/components/atoms/AIcon.vue';
 import OHydroChart from '@/components/organisms/OHydroChart.vue';
-import type { ApiError } from '@/lib/api-client';
-import { useStationsStore } from '@/stores/stations';
+import { useStationMeasurements, useStationSelection } from '@/composables/stations';
 
 const { t } = useI18n();
 
-const stationsStore = useStationsStore();
+const { selectedStation, selectedStationId, clearSelection } = useStationSelection();
 const {
-  selectedStation,
-  selectedStationId,
-  measurementsByStation,
-  measurementsLoadingByStation,
-  measurementsErrorByStation,
-} = storeToRefs(stationsStore);
+  series: allSeries,
+  isLoading,
+  error: fetchError,
+  load,
+  reload,
+} = useStationMeasurements(selectedStationId);
 
 const isOpen = computed(() => selectedStationId.value !== null);
 
@@ -32,37 +30,21 @@ const windowFrom = computed(() => new Date(now.value.getTime() - 24 * 60 * 60 * 
 watch(selectedStationId, (id) => {
   if (id === null) return;
   now.value = new Date();
-  void stationsStore.fetchMeasurements(id);
+  void load();
 });
 
 const dischargeSeries = computed<MeasurementSeries | null>(() => {
-  const id = selectedStationId.value;
-  if (id === null) return null;
-  const all = measurementsByStation.value[id];
-  if (!all) return null;
-  return all.find((s) => s.parameter === 'DISCHARGE') ?? null;
-});
-
-const isLoading = computed(() => {
-  const id = selectedStationId.value;
-  if (id === null) return false;
-  return measurementsLoadingByStation.value[id] === true;
-});
-
-const fetchError = computed<ApiError | null>(() => {
-  const id = selectedStationId.value;
-  if (id === null) return null;
-  return measurementsErrorByStation.value[id] ?? null;
+  const series = allSeries.value;
+  if (!series) return null;
+  return series.find((s) => s.parameter === 'DISCHARGE') ?? null;
 });
 
 function close(): void {
-  stationsStore.clearSelection();
+  clearSelection();
 }
 
 function retry(): void {
-  const id = selectedStationId.value;
-  if (id === null) return;
-  void stationsStore.fetchMeasurements(id, { force: true });
+  void reload();
 }
 
 // Escape closes. useEventListener auto-disposes with the scope, so no
