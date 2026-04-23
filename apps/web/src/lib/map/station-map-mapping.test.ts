@@ -15,6 +15,7 @@ function station(overrides: Partial<StationDTO>): StationDTO {
     flowType: 'NATURAL',
     operatorName: 'OFEV',
     dataSource: 'LIVE',
+    sourcingStatus: 'CONFIRMED',
     latestMeasurements: [],
     activeAlertsCount: 0,
     ...overrides,

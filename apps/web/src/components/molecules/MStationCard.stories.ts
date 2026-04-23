@@ -8,7 +8,7 @@ import type { Meta, StoryObj } from '@storybook/vue3-vite';
  * per ADR-008). Stories cover the four rendering combinations actually
  * used in production.
  */
-const meta = {
+const meta: Meta<typeof MStationCard> = {
   title: 'Molecules/MStationCard',
   component: MStationCard,
   tags: ['autodocs'],
@@ -45,7 +45,7 @@ const meta = {
     river: 'Borgne',
     context: 'Altitude 487 m · Bassin versant 392 km²',
   },
-} satisfies Meta<typeof MStationCard>;
+};
 
 export default meta;
 type Story = StoryObj<typeof meta>;

@@ -2,7 +2,7 @@ import { useStationsStore } from '@/stores/stations';
 
 import OMapSection from './OMapSection.vue';
 
-import type { Meta, StoryObj } from '@storybook/vue3-vite';
+import type { Decorator, Meta, StoryObj } from '@storybook/vue3-vite';
 
 /**
  * Stories cover the Loading and Error states of OMapSection.
@@ -19,15 +19,21 @@ import type { Meta, StoryObj } from '@storybook/vue3-vite';
  *   - Error:   hasLoadedOnce = true + error set
  * fetchStations is replaced with a no-op so the onMounted call does
  * not overwrite the seeded state with a real network failure.
+ *
+ * Typing mirrors OHeroSection.stories.ts — see that file for the
+ * rationale behind `Partial<$state>` + `$patch` function-form +
+ * `Decorator` return type.
  */
-type StationsPatch = Parameters<ReturnType<typeof useStationsStore>['$patch']>[0];
+type StationsPatch = Partial<ReturnType<typeof useStationsStore>['$state']>;
 
-function seedStations(patch: StationsPatch) {
-  return (story: unknown) => ({
+function seedStations(patch: StationsPatch): Decorator {
+  return (story) => ({
     components: { story },
     setup() {
       const store = useStationsStore();
-      store.$patch(patch);
+      store.$patch((state) => {
+        Object.assign(state, patch);
+      });
       store.fetchStations = async () => {
         /* no-op — Storybook has no backend */
       };
@@ -64,9 +70,7 @@ export const Error: Story = {
   decorators: [
     seedStations({
       hasLoadedOnce: true,
-      error: globalThis.Error
-        ? new globalThis.Error('Simulated network failure')
-        : ({ message: 'Simulated network failure' } as unknown as Error),
+      error: { kind: 'network', cause: new globalThis.Error('Simulated network failure') } as const,
     }),
   ],
 };

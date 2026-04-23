@@ -19,16 +19,14 @@ export function findNearestPointByPx(
   xPx: number,
   project: (p: MeasurementPoint) => number
 ): MeasurementPoint | null {
-  if (points.length === 0) return null;
-  let best = points[0];
-  let bestDist = Math.abs(project(best) - xPx);
-  for (let i = 1; i < points.length; i += 1) {
-    const p = points[i];
+  let best: MeasurementPoint | undefined;
+  let bestDist = Infinity;
+  for (const p of points) {
     const d = Math.abs(project(p) - xPx);
     if (d < bestDist) {
       best = p;
       bestDist = d;
     }
   }
-  return best;
+  return best ?? null;
 }

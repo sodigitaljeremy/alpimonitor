@@ -6,6 +6,20 @@ import { api, type ApiError } from '@/lib/api-client';
 
 export type { IngestionLastRun, IngestionToday } from '@/lib/api-client';
 
+/**
+ * No facade composable sits between this store and its consumers
+ * (OHeroSection, OKeyMetricsSection). This is deliberate — see ADR-010.
+ *
+ * Rationale: useStationsStore was split behind three feature facades
+ * (useStationsList, useStationSelection, useStationMeasurements) because
+ * it carried three concerns. useStatusStore only carries one — the
+ * ingestion health snapshot — and has two public consumers reading the
+ * same computeds. The rule of three isn't met; an extra indirection
+ * would be ceremony.
+ *
+ * If a third consumer appears that reads a distinct subset of the state,
+ * revisit and introduce a facade then.
+ */
 export const useStatusStore = defineStore('status', () => {
   // useNow ticks every 60s by default — this is what keeps
   // `minutesSinceLastSuccess` alive between two fetches. Without a

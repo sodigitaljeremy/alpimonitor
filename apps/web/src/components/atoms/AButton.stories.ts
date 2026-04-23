@@ -2,7 +2,21 @@ import AButton from './AButton.vue';
 
 import type { Meta, StoryObj } from '@storybook/vue3-vite';
 
-const meta = {
+/**
+ * `label` is a synthetic Storybook arg: the component itself exposes the
+ * label through a default slot, not a prop. See ABadge.stories.ts for the
+ * same pattern — declaring the args shape as a plain interface lets CSF3
+ * derive `argTypes` / `args` / `Story['args']` from it directly.
+ */
+interface AButtonStoryArgs {
+  variant?: 'primary' | 'secondary' | 'ghost';
+  size?: 'sm' | 'md' | 'lg';
+  type?: 'button' | 'submit';
+  label: string;
+  onClick?: (event: MouseEvent) => void;
+}
+
+const meta: Meta<AButtonStoryArgs> = {
   title: 'Atoms/AButton',
   component: AButton,
   tags: ['autodocs'],
@@ -38,10 +52,10 @@ const meta = {
     },
     template: `<AButton :variant="args.variant" :size="args.size" :type="args.type" @click="args.onClick">{{ args.label }}</AButton>`,
   }),
-} satisfies Meta<typeof AButton & { label: string }>;
+};
 
 export default meta;
-type Story = StoryObj<typeof meta>;
+type Story = StoryObj<AButtonStoryArgs>;
 
 export const Primary: Story = {
   args: { variant: 'primary', label: 'Voir les stations' },

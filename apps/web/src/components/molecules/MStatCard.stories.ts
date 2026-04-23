@@ -2,7 +2,7 @@ import MStatCard from './MStatCard.vue';
 
 import type { Meta, StoryObj } from '@storybook/vue3-vite';
 
-const meta = {
+const meta: Meta<typeof MStatCard> = {
   title: 'Molecules/MStatCard',
   component: MStatCard,
   tags: ['autodocs'],
@@ -27,7 +27,7 @@ const meta = {
       template: `<div style="max-width: 320px;"><story /></div>`,
     }),
   ],
-} satisfies Meta<typeof MStatCard>;
+};
 
 export default meta;
 type Story = StoryObj<typeof meta>;

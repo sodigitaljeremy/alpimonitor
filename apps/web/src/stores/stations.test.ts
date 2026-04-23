@@ -163,12 +163,11 @@ describe('useStationsStore', () => {
       const store = useStationsStore();
       await store.fetchMeasurements('s1');
 
-      expect(store.measurementsByStation.s1).toBeDefined();
-      expect(store.measurementsByStation.s1).toHaveLength(1);
-      expect(store.measurementsByStation.s1[0].parameter).toBe('DISCHARGE');
-      expect(store.measurementsByStation.s1[0].points).toEqual([
-        { t: '2026-04-21T11:00:00.000Z', v: 42 },
-      ]);
+      const series = store.measurementsByStation.s1;
+      expect(series).toBeDefined();
+      expect(series).toHaveLength(1);
+      expect(series?.[0]?.parameter).toBe('DISCHARGE');
+      expect(series?.[0]?.points).toEqual([{ t: '2026-04-21T11:00:00.000Z', v: 42 }]);
       expect(store.measurementsErrorByStation.s1).toBeNull();
       expect(store.measurementsLoadingByStation.s1).toBe(false);
     });
@@ -190,7 +189,7 @@ describe('useStationsStore', () => {
       );
       await store.fetchMeasurements('s1', { force: true });
       expect(fetchMock).toHaveBeenCalledTimes(2);
-      expect(store.measurementsByStation.s1[0].points).toEqual([
+      expect(store.measurementsByStation.s1?.[0]?.points).toEqual([
         { t: '2026-04-21T11:30:00.000Z', v: 11 },
       ]);
     });
@@ -203,7 +202,7 @@ describe('useStationsStore', () => {
       await store.fetchMeasurements('s1');
 
       expect(fetchMock).toHaveBeenCalledTimes(1);
-      expect(store.measurementsByStation.s1[0].points).toEqual([]);
+      expect(store.measurementsByStation.s1?.[0]?.points).toEqual([]);
     });
 
     it('captures http errors per station without polluting the cache', async () => {

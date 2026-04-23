@@ -2,7 +2,21 @@ import ABadge from './ABadge.vue';
 
 import type { Meta, StoryObj } from '@storybook/vue3-vite';
 
-const meta = {
+/**
+ * `label` is a synthetic Storybook arg: the component itself exposes the
+ * label through a default slot, not a prop. Declaring the args shape as a
+ * plain interface (instead of `typeof ABadge & { label: string }`) lets
+ * CSF3 derive `argTypes` / `args` / `Story['args']` from this interface —
+ * the intersection form was silently ignored by the `ComponentPropsAndSlots`
+ * inference in Storybook 10, surfacing as TS2353 on every occurrence of
+ * `label`.
+ */
+interface ABadgeStoryArgs {
+  variant?: 'live' | 'research' | 'neutral';
+  label: string;
+}
+
+const meta: Meta<ABadgeStoryArgs> = {
   title: 'Atoms/ABadge',
   component: ABadge,
   tags: ['autodocs'],
@@ -29,10 +43,10 @@ const meta = {
     },
     template: `<ABadge :variant="args.variant">{{ args.label }}</ABadge>`,
   }),
-} satisfies Meta<typeof ABadge & { label: string }>;
+};
 
 export default meta;
-type Story = StoryObj<typeof meta>;
+type Story = StoryObj<ABadgeStoryArgs>;
 
 export const Live: Story = {
   args: { variant: 'live', label: 'Live OFEV' },

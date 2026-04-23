@@ -2,7 +2,7 @@ import { useStatusStore } from '@/stores/status';
 
 import OHeroSection from './OHeroSection.vue';
 
-import type { Meta, StoryObj } from '@storybook/vue3-vite';
+import type { Decorator, Meta, StoryObj } from '@storybook/vue3-vite';
 
 /**
  * OHeroSection reads the status store + polls GET /api/v1/status every
@@ -11,15 +11,30 @@ import type { Meta, StoryObj } from '@storybook/vue3-vite';
  *   2. Replaces fetchStatus() with a no-op so the polling loop never
  *      issues a real request (it would overwrite the seeded state with
  *      a network error otherwise).
+ *
+ * Typing notes:
+ *   - `StatusPatch` derives from `$state` (not `$patch` params) to force
+ *     the object-literal overload — `$patch` has a function-overload that
+ *     TS would otherwise prefer, masking unknown keys as callback params.
+ *   - `Decorator` from Storybook typed the return of `seedStatus` so the
+ *     decorator function satisfies the CSF3 contract (the prior
+ *     `(story: unknown) => { ... }` shape was not assignable).
  */
-type StatusPatch = Parameters<ReturnType<typeof useStatusStore>['$patch']>[0];
+type StatusPatch = Partial<ReturnType<typeof useStatusStore>['$state']>;
 
-function seedStatus(patch: StatusPatch) {
-  return (story: unknown) => ({
+function seedStatus(patch: StatusPatch): Decorator {
+  return (story) => ({
     components: { story },
     setup() {
       const store = useStatusStore();
-      store.$patch(patch);
+      // `$patch` has both object and function overloads; the object form
+      // resolves `_DeepPartial<UnwrapRef<S>>` and does not reliably accept
+      // `Partial<$state>` because of the ref-unwrapping layer. The
+      // function form sidesteps the overload pick and is idiomatic for
+      // programmatic seeding in tests/stories.
+      store.$patch((state) => {
+        Object.assign(state, patch);
+      });
       store.fetchStatus = async () => {
         /* no-op — Storybook has no backend */
       };
@@ -72,7 +87,7 @@ export const Offline: Story = {
   decorators: [
     seedStatus({
       hasLoadedOnce: true,
-      error: new Error('Simulated network failure'),
+      error: { kind: 'network', cause: new Error('Simulated network failure') } as const,
       lastSuccessAt: null,
     }),
   ],

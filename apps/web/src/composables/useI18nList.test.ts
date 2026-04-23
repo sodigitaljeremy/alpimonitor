@@ -7,11 +7,20 @@ import { useI18nList } from './useI18nList';
 
 type Station = { name: string; river: string };
 
-function captureList<T>(key: string, messages: Record<string, unknown>): T[] {
+// Test fixture shape: the only constraint is that values are consumable by
+// vue-i18n's `tm()`. We use `unknown` + a cast at the createI18n boundary
+// because vue-i18n 11's `LocaleMessageDictionary` is too narrow for mixed
+// string/array/object payloads we deliberately push here (incl. the "key
+// resolves to a string, not an array" edge case tested below).
+type TestMessages = Record<string, unknown>;
+
+function captureList<T>(key: string, messages: TestMessages): T[] {
   const i18n = createI18n({
     legacy: false,
     locale: 'fr',
-    messages: { fr: messages },
+    // The cast is scoped to the test harness; the composable under test
+    // still receives fully-typed translations through useI18n().
+    messages: { fr: messages } as unknown as { fr: Record<string, string> },
   });
 
   let captured: ComputedRef<T[]> | undefined;

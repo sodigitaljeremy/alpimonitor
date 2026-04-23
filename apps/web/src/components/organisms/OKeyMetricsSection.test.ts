@@ -25,6 +25,7 @@ function makeStation(partial: Partial<StationDTO> & { id: string }): StationDTO 
     flowType: partial.flowType ?? 'NATURAL',
     operatorName: partial.operatorName ?? 'OFEV',
     dataSource: partial.dataSource ?? 'LIVE',
+    sourcingStatus: partial.sourcingStatus ?? 'CONFIRMED',
     latestMeasurements: partial.latestMeasurements ?? [],
     activeAlertsCount: partial.activeAlertsCount ?? 0,
   };

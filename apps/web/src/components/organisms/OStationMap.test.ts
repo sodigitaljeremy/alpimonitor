@@ -1,5 +1,6 @@
 import type { StationDTO } from '@alpimonitor/shared';
 import { mount } from '@vue/test-utils';
+import type { TileLayerOptions } from 'leaflet';
 import { createPinia, setActivePinia } from 'pinia';
 import { createI18n } from 'vue-i18n';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -39,7 +40,10 @@ const tileLayerInstance = {
 
 const leafletMock = {
   map: vi.fn(() => mapInstance),
-  tileLayer: vi.fn(() => tileLayerInstance),
+  // Typed params so `mock.calls[n]` resolves to a real tuple — the
+  // OSM URL assertion below reads `mock.calls[0]?.[0]` and needs the
+  // first arg position to be known.
+  tileLayer: vi.fn((_url: string, _opts?: TileLayerOptions) => tileLayerInstance),
   layerGroup: vi.fn(() => layerGroupInstance),
   circleMarker: vi.fn((): MarkerMock => {
     const marker: MarkerMock = {

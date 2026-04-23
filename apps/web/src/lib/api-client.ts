@@ -16,6 +16,11 @@ export interface IngestionToday {
   successRate: number | null;
 }
 
+// TODO (post-candidature): in a production build, throw at module load
+// if VITE_API_BASE_URL is undefined. POC-acceptable today — the missing
+// var silently becomes the string "undefined" and every fetch surfaces
+// as `{ kind: 'network' }`, which the UI treats as a generic failure.
+// Acceptable for dev/review; misleading in ops. See ADR-010.
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 /**

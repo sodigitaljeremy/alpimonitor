@@ -28,7 +28,7 @@ function buildSeries(windowFrom: Date, windowTo: Date, pointCount: number): Meas
 const now = new Date();
 const dayAgo = new Date(now.getTime() - ONE_DAY_MS);
 
-const meta = {
+const meta: Meta<typeof OHydroChart> = {
   title: 'Organisms/OHydroChart',
   component: OHydroChart,
   tags: ['autodocs'],
@@ -48,7 +48,7 @@ const meta = {
       template: `<div style="max-width: 640px; padding: 24px;"><story /></div>`,
     }),
   ],
-} satisfies Meta<typeof OHydroChart>;
+};
 
 export default meta;
 type Story = StoryObj<typeof meta>;

@@ -7,7 +7,7 @@ import type { Meta, StoryObj } from '@storybook/vue3-vite';
  * theme. Stories use the `graphite` background + a padded wrapper so the
  * top-anchored tooltip has room to surface on hover/focus.
  */
-const meta = {
+const meta: Meta<typeof ASourcingBadge> = {
   title: 'Atoms/ASourcingBadge',
   component: ASourcingBadge,
   tags: ['autodocs'],
@@ -38,7 +38,7 @@ const meta = {
     },
     template: `<ASourcingBadge :status="args.status" />`,
   }),
-} satisfies Meta<typeof ASourcingBadge>;
+};
 
 export default meta;
 type Story = StoryObj<typeof meta>;

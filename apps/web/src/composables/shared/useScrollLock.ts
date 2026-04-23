@@ -10,6 +10,13 @@ import { onScopeDispose, watch, type Ref } from 'vue';
  * be precise: whatever value was on `body.style.overflow` before we
  * locked is what we put back. Apps that never set it inline just see
  * the empty string — which is what the cascade already gave them.
+ *
+ * Single-consumer only. Two consumers mounting this simultaneously would
+ * race on the `previousOverflow` snapshot: the second would capture
+ * `'hidden'` (already set by the first) and restore it on close, leaving
+ * the body locked. AlpiMonitor has one drawer today — if future
+ * drawers/overlays stack, this needs a module-scoped ref-count or a
+ * single coordinator. See ADR-010.
  */
 export function useScrollLock(isOpen: Ref<boolean>): void {
   if (typeof document === 'undefined') return;
