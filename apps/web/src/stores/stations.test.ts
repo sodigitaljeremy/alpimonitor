@@ -25,6 +25,7 @@ function station(partial: Partial<StationDTO> & { id: string }): StationDTO {
     flowType: partial.flowType ?? 'NATURAL',
     operatorName: partial.operatorName ?? 'OFEV',
     dataSource: partial.dataSource ?? 'LIVE',
+    sourcingStatus: partial.sourcingStatus ?? 'CONFIRMED',
     latestMeasurements: partial.latestMeasurements ?? [],
     activeAlertsCount: partial.activeAlertsCount ?? 0,
   };
@@ -83,26 +84,31 @@ describe('useStationsStore', () => {
     expect(store.stations).toEqual([]);
   });
 
-  it('captures error on HTTP 500 and keeps hasLoadedOnce false', async () => {
+  it('captures an http error on HTTP 500 and keeps hasLoadedOnce false', async () => {
     fetchMock.mockResolvedValueOnce(httpError(500, 'Internal Server Error'));
 
     const store = useStationsStore();
     await store.fetchStations();
 
-    expect(store.error).toBeInstanceOf(Error);
-    expect(store.error?.message).toContain('500');
+    expect(store.error?.kind).toBe('http');
+    if (store.error?.kind === 'http') {
+      expect(store.error.status).toBe(500);
+      expect(store.error.path).toBe('/stations');
+    }
     expect(store.hasLoadedOnce).toBe(false);
     expect(store.stations).toEqual([]);
   });
 
-  it('captures a network error as an Error instance', async () => {
+  it('captures a network error with the underlying cause', async () => {
     fetchMock.mockRejectedValueOnce(new TypeError('Failed to fetch'));
 
     const store = useStationsStore();
     await store.fetchStations();
 
-    expect(store.error).toBeInstanceOf(Error);
-    expect(store.error?.message).toBe('Failed to fetch');
+    expect(store.error?.kind).toBe('network');
+    if (store.error?.kind === 'network') {
+      expect(store.error.cause.message).toBe('Failed to fetch');
+    }
     expect(store.hasLoadedOnce).toBe(false);
   });
 
@@ -112,7 +118,7 @@ describe('useStationsStore', () => {
 
     const store = useStationsStore();
     await store.fetchStations();
-    expect(store.error).toBeInstanceOf(Error);
+    expect(store.error?.kind).toBe('network');
 
     await store.fetchStations();
     expect(store.error).toBeNull();
@@ -200,14 +206,17 @@ describe('useStationsStore', () => {
       expect(store.measurementsByStation.s1[0].points).toEqual([]);
     });
 
-    it('captures HTTP errors per station without polluting the cache', async () => {
+    it('captures http errors per station without polluting the cache', async () => {
       fetchMock.mockResolvedValueOnce(httpError(500, 'Internal Server Error'));
 
       const store = useStationsStore();
       await store.fetchMeasurements('s1');
 
-      expect(store.measurementsErrorByStation.s1).toBeInstanceOf(Error);
-      expect(store.measurementsErrorByStation.s1?.message).toContain('500');
+      const err = store.measurementsErrorByStation.s1;
+      expect(err?.kind).toBe('http');
+      if (err?.kind === 'http') {
+        expect(err.status).toBe(500);
+      }
       expect(store.measurementsByStation.s1).toBeUndefined();
       expect(store.measurementsLoadingByStation.s1).toBe(false);
     });

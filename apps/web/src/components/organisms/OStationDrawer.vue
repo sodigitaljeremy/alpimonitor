@@ -7,6 +7,7 @@ import { useI18n } from 'vue-i18n';
 
 import AIcon from '@/components/atoms/AIcon.vue';
 import OHydroChart from '@/components/organisms/OHydroChart.vue';
+import type { ApiError } from '@/lib/api-client';
 import { useStationsStore } from '@/stores/stations';
 
 const { t } = useI18n();
@@ -48,7 +49,7 @@ const isLoading = computed(() => {
   return measurementsLoadingByStation.value[id] === true;
 });
 
-const fetchError = computed<Error | null>(() => {
+const fetchError = computed<ApiError | null>(() => {
   const id = selectedStationId.value;
   if (id === null) return null;
   return measurementsErrorByStation.value[id] ?? null;

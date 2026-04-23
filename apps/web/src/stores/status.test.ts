@@ -107,24 +107,29 @@ describe('useStatusStore', () => {
     expect(store.minutesSinceLastSuccess).toBeNull();
   });
 
-  it('captures error on HTTP 500 and leaves state otherwise untouched', async () => {
+  it('captures an http error on HTTP 500 and leaves state otherwise untouched', async () => {
     fetchMock.mockResolvedValueOnce(httpError(500, 'Internal Server Error'));
     const store = useStatusStore();
     await store.fetchStatus();
 
-    expect(store.error).toBeInstanceOf(Error);
-    expect(store.error?.message).toContain('500');
+    expect(store.error?.kind).toBe('http');
+    if (store.error?.kind === 'http') {
+      expect(store.error.status).toBe(500);
+      expect(store.error.path).toBe('/status');
+    }
     expect(store.hasLoadedOnce).toBe(false);
     expect(store.lastSuccessAt).toBeNull();
   });
 
-  it('captures a network error as an Error', async () => {
+  it('captures a network error with the underlying cause', async () => {
     fetchMock.mockRejectedValueOnce(new TypeError('Failed to fetch'));
     const store = useStatusStore();
     await store.fetchStatus();
 
-    expect(store.error).toBeInstanceOf(Error);
-    expect(store.error?.message).toBe('Failed to fetch');
+    expect(store.error?.kind).toBe('network');
+    if (store.error?.kind === 'network') {
+      expect(store.error.cause.message).toBe('Failed to fetch');
+    }
     expect(store.hasLoadedOnce).toBe(false);
   });
 

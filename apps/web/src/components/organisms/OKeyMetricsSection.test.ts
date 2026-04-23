@@ -170,7 +170,7 @@ describe('OKeyMetricsSection', () => {
     const statusStore = useStatusStore();
     await statusStore.fetchStatus();
 
-    expect(statusStore.error).toBeInstanceOf(Error);
+    expect(statusStore.error?.kind).toBe('http');
     expect(statusStore.hasLoadedOnce).toBe(false);
 
     const wrapper = mountSection();

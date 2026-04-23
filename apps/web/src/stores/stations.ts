@@ -1,13 +1,10 @@
-import type { MeasurementSeries, StationDTO, StationMeasurementsDTO } from '@alpimonitor/shared';
+import type { MeasurementSeries, StationDTO } from '@alpimonitor/shared';
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+import { api, type ApiError } from '@/lib/api-client';
 
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
-
-type StationsListResponse = { data: StationDTO[] };
-type StationMeasurementsResponse = { data: StationMeasurementsDTO };
 
 export interface FetchMeasurementsOptions {
   force?: boolean;
@@ -16,7 +13,7 @@ export interface FetchMeasurementsOptions {
 export const useStationsStore = defineStore('stations', () => {
   const items = ref<StationDTO[]>([]);
   const loading = ref(false);
-  const error = ref<Error | null>(null);
+  const error = ref<ApiError | null>(null);
   // Distinguishes "fetch never returned yet" (show placeholder) from
   // "fetch returned, list is legitimately empty" (show empty-state).
   const hasLoadedOnce = ref(false);
@@ -26,7 +23,7 @@ export const useStationsStore = defineStore('stations', () => {
   // we always reassign with a new object literal.
   const measurementsByStation = ref<Record<string, MeasurementSeries[]>>({});
   const measurementsLoadingByStation = ref<Record<string, boolean>>({});
-  const measurementsErrorByStation = ref<Record<string, Error | null>>({});
+  const measurementsErrorByStation = ref<Record<string, ApiError | null>>({});
 
   const selectedStationId = ref<string | null>(null);
 
@@ -41,19 +38,14 @@ export const useStationsStore = defineStore('stations', () => {
   async function fetchStations(): Promise<void> {
     loading.value = true;
     error.value = null;
-    try {
-      const response = await fetch(`${API_BASE_URL}/stations`);
-      if (!response.ok) {
-        throw new Error(`API ${response.status} ${response.statusText} on /stations`);
-      }
-      const body = (await response.json()) as StationsListResponse;
-      items.value = body.data;
+    const result = await api.getStations();
+    if (result.success) {
+      items.value = result.data.data;
       hasLoadedOnce.value = true;
-    } catch (err) {
-      error.value = err instanceof Error ? err : new Error(String(err));
-    } finally {
-      loading.value = false;
+    } else {
+      error.value = result.error;
     }
+    loading.value = false;
   }
 
   function selectStation(id: string): void {
@@ -85,38 +77,30 @@ export const useStationsStore = defineStore('stations', () => {
       [stationId]: null,
     };
 
-    try {
-      const to = new Date();
-      const from = new Date(to.getTime() - ONE_DAY_MS);
-      const params = new URLSearchParams({
-        parameter: 'DISCHARGE',
-        from: from.toISOString(),
-        to: to.toISOString(),
-      });
-      const url = `${API_BASE_URL}/stations/${stationId}/measurements?${params}`;
+    const to = new Date();
+    const from = new Date(to.getTime() - ONE_DAY_MS);
+    const result = await api.getStationMeasurements(stationId, {
+      parameter: 'DISCHARGE',
+      from,
+      to,
+    });
 
-      const response = await fetch(url);
-      if (!response.ok) {
-        throw new Error(
-          `API ${response.status} ${response.statusText} on /stations/${stationId}/measurements`
-        );
-      }
-      const body = (await response.json()) as StationMeasurementsResponse;
+    if (result.success) {
       measurementsByStation.value = {
         ...measurementsByStation.value,
-        [stationId]: body.data.series,
+        [stationId]: result.data.data.series,
       };
-    } catch (err) {
+    } else {
       measurementsErrorByStation.value = {
         ...measurementsErrorByStation.value,
-        [stationId]: err instanceof Error ? err : new Error(String(err)),
-      };
-    } finally {
-      measurementsLoadingByStation.value = {
-        ...measurementsLoadingByStation.value,
-        [stationId]: false,
+        [stationId]: result.error,
       };
     }
+
+    measurementsLoadingByStation.value = {
+      ...measurementsLoadingByStation.value,
+      [stationId]: false,
+    };
   }
 
   return {

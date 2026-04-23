@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia';
-import { computed, onScopeDispose, onMounted } from 'vue';
+import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import AIcon from '@/components/atoms/AIcon.vue';
 import MStatusBadge from '@/components/molecules/MStatusBadge.vue';
+import { usePolling } from '@/composables/shared/usePolling';
 import { useStatusStore } from '@/stores/status';
 
 type BadgeStatus = 'live' | 'stale' | 'offline' | 'loading';
@@ -37,21 +38,8 @@ const badgeLabel = computed(() => {
 });
 
 const POLL_INTERVAL_MS = 60_000;
-let intervalId: ReturnType<typeof setInterval> | null = null;
 
-onMounted(() => {
-  void statusStore.fetchStatus();
-  intervalId = setInterval(() => {
-    void statusStore.fetchStatus();
-  }, POLL_INTERVAL_MS);
-});
-
-onScopeDispose(() => {
-  if (intervalId !== null) {
-    clearInterval(intervalId);
-    intervalId = null;
-  }
-});
+usePolling(() => statusStore.fetchStatus(), POLL_INTERVAL_MS, { immediate: true });
 </script>
 
 <template>

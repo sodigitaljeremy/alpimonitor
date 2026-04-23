@@ -2,34 +2,9 @@ import { useNow } from '@vueuse/core';
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+import { api, type ApiError } from '@/lib/api-client';
 
-export type IngestionLastRun = {
-  source: string;
-  status: string;
-  startedAt: string;
-  completedAt: string | null;
-  stationsSeenCount: number;
-  measurementsCreatedCount: number;
-  durationMs: number | null;
-};
-
-export type IngestionToday = {
-  runsCount: number;
-  measurementsCreatedSum: number;
-  successRate: number | null;
-};
-
-type StatusResponse = {
-  api: { status: 'ok'; uptimeSeconds: number };
-  database: { status: 'ok' | 'error' };
-  ingestion: {
-    lastRun: IngestionLastRun | null;
-    lastSuccessAt: string | null;
-    healthyThresholdMinutes: number;
-    today: IngestionToday;
-  };
-};
+export type { IngestionLastRun, IngestionToday } from '@/lib/api-client';
 
 export const useStatusStore = defineStore('status', () => {
   // useNow ticks every 60s by default — this is what keeps
@@ -38,16 +13,15 @@ export const useStatusStore = defineStore('status', () => {
   // next poll landed.
   const now = useNow({ interval: 60_000 });
 
-  const lastRun = ref<IngestionLastRun | null>(null);
   const lastSuccessAt = ref<Date | null>(null);
   const healthyThresholdMinutes = ref<number>(30);
-  const today = ref<IngestionToday>({
+  const today = ref({
     runsCount: 0,
     measurementsCreatedSum: 0,
-    successRate: null,
+    successRate: null as number | null,
   });
   const loading = ref(false);
-  const error = ref<Error | null>(null);
+  const error = ref<ApiError | null>(null);
   // Distinguishes "fetch never completed yet" from "fetched, but lastSuccessAt
   // is legitimately null" (DB reset, no SUCCESS run ever). The badge needs
   // both signals to show a 'loading' state without flashing 'offline'.
@@ -68,28 +42,22 @@ export const useStatusStore = defineStore('status', () => {
   async function fetchStatus(): Promise<void> {
     loading.value = true;
     error.value = null;
-    try {
-      const response = await fetch(`${API_BASE_URL}/status`);
-      if (!response.ok) {
-        throw new Error(`API ${response.status} ${response.statusText} on /status`);
-      }
-      const body = (await response.json()) as StatusResponse;
-      lastRun.value = body.ingestion.lastRun;
+    const result = await api.getStatus();
+    if (result.success) {
+      const body = result.data;
       lastSuccessAt.value = body.ingestion.lastSuccessAt
         ? new Date(body.ingestion.lastSuccessAt)
         : null;
       healthyThresholdMinutes.value = body.ingestion.healthyThresholdMinutes;
       today.value = body.ingestion.today;
       hasLoadedOnce.value = true;
-    } catch (err) {
-      error.value = err instanceof Error ? err : new Error(String(err));
-    } finally {
-      loading.value = false;
+    } else {
+      error.value = result.error;
     }
+    loading.value = false;
   }
 
   return {
-    lastRun,
     lastSuccessAt,
     healthyThresholdMinutes,
     today,
