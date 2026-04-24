@@ -2,6 +2,10 @@
 
 Décomposition C4-C3 du container SPA. L'architecture post-refactor est entièrement spécifiée dans [ADR-010](../09-architectural-decisions/adr-010.md) — ce document en donne la vue orientée *building blocks*.
 
+Vue C4 niveau 3 frontend (exportée depuis [Structurizr](../assets/structurizr/workspace.dsl)) :
+
+![C4 Components Frontend — organisms, composables, lib/, stores](../assets/diagrams/c4-components-frontend.svg)
+
 ## 5.F.1 Couches
 
 ```

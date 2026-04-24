@@ -2,6 +2,10 @@
 
 Décomposition C4-C3 du container API. Monolithe Fastify hébergeant à la fois les endpoints REST et le cron d'ingestion LINDAS ([ADR-003](../09-architectural-decisions/adr-003.md)).
 
+Vue C4 niveau 3 backend (exportée depuis [Structurizr](../assets/structurizr/workspace.dsl)) :
+
+![C4 Components Backend — routes, plugins, ingestion LINDAS](../assets/diagrams/c4-components-backend.svg)
+
 ## 5.B.1 Organisation du code
 
 ```

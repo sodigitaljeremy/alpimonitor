@@ -41,7 +41,37 @@ Sortie : `site/` (HTML + assets prêts à servir par n'importe quel serveur HTTP
 
 - **Mermaid** : inline dans les pages `.md`, rendu via `mkdocs-mermaid2-plugin`. Utilisation typique : flowcharts, sequence simples, diagrammes de déploiement légers.
 - **PlantUML** : inline via bloc ```plantuml```, rendu par `mkdocs-kroki-plugin` qui POST vers `kroki.io`. Réservé aux sequence diagrams complexes.
-- **C4 Structurizr** : workspace unique `assets/structurizr/workspace.dsl` + export SVG commité dans `assets/diagrams/`. Phase 3 complètera les 4 vues (Context, Containers, Components Frontend, Components Backend).
+- **C4 Structurizr** : workspace unique `assets/structurizr/workspace.dsl` + export SVG commité dans `assets/diagrams/`. 4 vues (Context, Containers, Components Frontend, Components Backend) rendues par le workflow ci-dessous.
+
+### Regenerate C4 diagrams
+
+Prérequis : Docker installé. Workflow en deux étapes, à lancer depuis la racine du repo :
+
+```bash
+# 1. DSL → 4 fichiers PlantUML/C4 (via structurizr/structurizr)
+docker run --rm -u "$(id -u):$(id -g)" \
+  -v "$(pwd)/docs/assets/structurizr:/ws" \
+  structurizr/structurizr export \
+  -w /ws/workspace.dsl -f plantuml/c4plantuml -o /ws
+
+# 2. Chaque .puml → SVG (via plantuml/plantuml local, stdlib bundled)
+docker run --rm -u "$(id -u):$(id -g)" \
+  -v "$(pwd)/docs/assets/structurizr:/data" \
+  plantuml/plantuml -tsvg -o /data /data/structurizr-*.puml
+
+# 3. Déplacer les SVG vers docs/assets/diagrams/ (naming conventionnel)
+mv docs/assets/structurizr/structurizr-Context.svg docs/assets/diagrams/c4-context.svg
+mv docs/assets/structurizr/structurizr-Containers.svg docs/assets/diagrams/c4-containers.svg
+mv docs/assets/structurizr/structurizr-Components-Frontend.svg docs/assets/diagrams/c4-components-frontend.svg
+mv docs/assets/structurizr/structurizr-Components-Backend.svg docs/assets/diagrams/c4-components-backend.svg
+
+# 4. Nettoyer les .puml intermédiaires (régénérables depuis workspace.dsl)
+trash docs/assets/structurizr/structurizr-*.puml
+```
+
+Kroki.io a été testé pour ce rendu mais refuse les PlantUML stdlib `<C4/C4>` (HTTP 400). `plantuml/plantuml` local embarque la stdlib et rend proprement.
+
+Auto-render via GitHub Action envisagé post-candidature (trigger sur changement de `workspace.dsl`, commit auto des 4 SVG).
 
 ### Décision Kroki : SaaS public plutôt que self-host
 

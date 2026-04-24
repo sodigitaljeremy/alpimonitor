@@ -4,11 +4,11 @@
 
 AlpiMonitor est un système web autonome qui **consomme des données publiques ouvertes** et les **restitue en lecture seule** à un public web. Il n'est connecté à aucun CRM, aucun back-office tiers, aucune source privée.
 
-<!-- C4-C1 Context diagram to be rendered Phase 3 from assets/structurizr/workspace.dsl
-![C4 Context](../assets/diagrams/c4-context.svg)
--->
+Vue C4 niveau 1 (exportée depuis [Structurizr](../assets/structurizr/workspace.dsl)) :
 
-Acteurs et flux :
+![C4 Context — AlpiMonitor et ses acteurs externes](../assets/diagrams/c4-context.svg)
+
+La même topologie en Mermaid inline, orientée flux plutôt que C4 :
 
 ```mermaid
 graph LR

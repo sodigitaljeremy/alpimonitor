@@ -4,9 +4,11 @@ Décomposition structurelle niveau C4-C2 (containers) avec renvois vers C4-C3 (c
 
 ## 5.1 Niveau container (C4-C2)
 
-<!-- C4-C2 Containers diagram to be rendered Phase 3 from assets/structurizr/workspace.dsl
-![C4 Containers](../assets/diagrams/c4-containers.svg)
--->
+Vue C4 niveau 2 (exportée depuis [Structurizr](../assets/structurizr/workspace.dsl)) :
+
+![C4 Containers — topologie AlpiMonitor sur VPS Hetzner](../assets/diagrams/c4-containers.svg)
+
+La même topologie en Mermaid inline, orientée flux :
 
 ```mermaid
 graph TB
