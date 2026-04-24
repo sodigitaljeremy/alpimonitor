@@ -41,7 +41,7 @@ Ordre dans chaque fichier : standard Node → tiers (`vue`, `pinia`, `@prisma/cl
 
 **Pyramide visée** :
 
-```
+```text
             /\
            /E2E\          0 aujourd'hui — Playwright reporté v2
           /------\

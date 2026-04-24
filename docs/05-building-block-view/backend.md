@@ -8,7 +8,7 @@ Vue C4 niveau 3 backend (exportée depuis [Structurizr](../assets/structurizr/wo
 
 ## 5.B.1 Organisation du code
 
-```
+```text
 apps/api/src/
 ├── routes/            # Définition Fastify (route + schema Zod + handler)
 │   ├── health.ts      # GET /api/v1/health

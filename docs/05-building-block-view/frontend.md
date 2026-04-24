@@ -8,7 +8,7 @@ Vue C4 niveau 3 frontend (exportée depuis [Structurizr](../assets/structurizr/w
 
 ## 5.F.1 Couches
 
-```
+```text
 src/
 ├── components/
 │   ├── atoms/         # a- (ABadge, AButton, AIcon, ANumericValue, ASourcingBadge)

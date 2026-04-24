@@ -14,7 +14,7 @@ Les décisions top-level qui cadrent l'architecture, avant la décomposition dé
 
 ## 4.2 Décomposition top-level
 
-```
+```text
 alpimonitor/
 ├── apps/
 │   ├── web/        # SPA Vue 3 + Vite + Pinia + Leaflet + D3
@@ -30,7 +30,7 @@ Trois workspaces, zéro service détaché. Le cron d'ingestion est un plugin Fas
 
 Le flux principal est **pull depuis LINDAS → push vers le client via REST JSON** :
 
-```
+```text
 [LINDAS SPARQL]
      ↓ cron 10 min, plugin Fastify
 [Parser SPARQL JSON + validation Zod]

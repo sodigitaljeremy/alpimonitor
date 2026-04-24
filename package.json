@@ -18,6 +18,8 @@
     "lint:fix": "eslint . --cache --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "docs:lint": "markdownlint-cli2",
+    "docs:lint:fix": "markdownlint-cli2 --fix",
     "prepare": "simple-git-hooks"
   },
   "devDependencies": {
@@ -29,6 +31,7 @@
     "eslint-plugin-vue": "^9.31.0",
     "globals": "^15.12.0",
     "lint-staged": "^15.2.10",
+    "markdownlint-cli2": "^0.22.1",
     "prettier": "^3.3.3",
     "puppeteer": "^24.42.0",
     "simple-git-hooks": "^2.11.1",

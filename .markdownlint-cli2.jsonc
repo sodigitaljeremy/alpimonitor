@@ -1,0 +1,26 @@
+{
+  // Règles markdownlint activées/désactivées pour la doc arc42 AlpiMonitor
+  // Ref: https://github.com/DavidAnson/markdownlint/blob/main/doc/Rules.md
+  "config": {
+    "default": true,
+
+    // Désactivées (trop strictes pour notre style éditorial) :
+    "MD013": false, // Line length — on laisse les lignes longues pour lisibilité source diff
+    "MD033": false, // Inline HTML — on utilise <!-- commentaires --> parfois
+    "MD041": false, // First line H1 — le docs/README.md commence sans H1 (contributor guide)
+
+    // Assouplies :
+    "MD024": { "siblings_only": true }, // Duplicate headings — OK si sous parent différent
+    "MD029": { "style": "ordered" }, // Ordered lists — forcé en style incrémental
+    "MD036": false, // Emphasis as heading — on utilise parfois **bold** en place de ### pour densité
+    "MD040": true, // Fenced code blocks must have language — FORCE l'ajout de langage
+    "MD046": { "style": "fenced" }, // Code block style — fences uniquement, pas d'indentation
+
+    // Désactivée après audit initial — notre style de tables compactes
+    // (`|---|---|` sans espaces autour des pipes) rend 114 faux-positifs.
+    // Cohérence volontaire, gain lisibilité source négligeable vs coût.
+    "MD060": false, // Table column style — notre style est compact-by-design
+  },
+  "globs": ["docs/**/*.md"],
+  "ignores": ["docs/_legacy/**", "site/**", "node_modules/**", ".venv-docs/**"],
+}
