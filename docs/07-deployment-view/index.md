@@ -6,33 +6,33 @@ Infrastructure, pipeline, et conventions ops. Les trois post-mortems (voir [sous
 
 ```mermaid
 graph TB
-    subgraph Internet
+    subgraph internet [Internet]
         User[Public web]
         Recruiter[Relecteur technique]
         Github[GitHub App<br/>push main]
     end
 
-    subgraph DNS OVH
-        DNS[A records :<br/>alpimonitor.fr<br/>api.alpimonitor.fr<br/>storybook.alpimonitor.fr<br/>docs.alpimonitor.fr]
+    subgraph dns [DNS OVH]
+        DNS[A records<br/>alpimonitor.fr<br/>api.alpimonitor.fr<br/>storybook.alpimonitor.fr<br/>docs.alpimonitor.fr]
     end
 
-    subgraph VPS Hetzner — 95.216.196.69
-        Traefik[Traefik<br/>TLS Let's Encrypt<br/>reverse proxy]
+    subgraph vps [VPS Hetzner — 95.216.196.69]
+        Traefik[Traefik<br/>TLS Lets Encrypt<br/>reverse proxy]
         Coolify[Coolify v4<br/>orchestrator]
 
-        subgraph alpimonitor-prod
+        subgraph prod [alpimonitor-prod]
             Web[nginx:1.27-alpine<br/>SPA static<br/>6 headers sécurité]
             API[node:20-alpine<br/>Fastify + cron ingestion]
             DB[(postgres:16-alpine<br/>alpimonitor-pgdata)]
         end
 
-        subgraph alpimonitor-storybook
+        subgraph sb [alpimonitor-storybook]
             SB[nginx:1.27-alpine<br/>Storybook static]
         end
     end
 
-    subgraph External
-        LetsEncrypt[Let's Encrypt<br/>ACME HTTP-01]
+    subgraph external [External]
+        LetsEncrypt[Lets Encrypt<br/>ACME HTTP-01]
         LINDAS[LINDAS SPARQL<br/>OFEV/BAFU]
         OSM[OpenStreetMap tiles]
     end

@@ -12,18 +12,18 @@ La même topologie en Mermaid inline, orientée flux :
 
 ```mermaid
 graph TB
-    subgraph Browser
+    subgraph browser [Browser]
         SPA[SPA Vue 3<br/>Vite + TS + Tailwind<br/>Pinia + Leaflet + D3]
     end
 
-    subgraph VPS Hetzner — Coolify
+    subgraph vps [VPS Hetzner — Coolify]
         Traefik[Traefik<br/>reverse proxy + TLS]
         Nginx[nginx<br/>static SPA + 6 headers]
         API[Fastify API<br/>+ cron ingestion embarqué]
         DB[(PostgreSQL 16)]
     end
 
-    subgraph External
+    subgraph external [External]
         LINDAS[LINDAS SPARQL<br/>OFEV/BAFU]
         OSM[OpenStreetMap<br/>tiles]
     end
