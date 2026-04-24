@@ -39,11 +39,11 @@ const currentYear = new Date().getFullYear();
             <li>
               <a
                 class="o-site-footer__link"
-                href="/docs/architecture/adr/007-lindas-sparql-data-source.md"
+                href="https://docs.alpimonitor.fr/"
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                <span>{{ t('footer.links.adr') }}</span>
+                <span>{{ t('footer.links.docs') }}</span>
                 <AIcon name="external" :size="14" />
               </a>
             </li>
