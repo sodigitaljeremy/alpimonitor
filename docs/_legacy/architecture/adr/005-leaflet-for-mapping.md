@@ -1,0 +1,92 @@
+# ADR-005 — Leaflet pour la cartographie
+
+**Date** : 2026-04-18
+**Statut** : Acceptée — implémentée avec deux ajustements documentés (voir § Drifts)
+**Implémentation** : `df4754c` (install leaflet), `47dabed` (OStationMap + OMapSection avec 7 markers LIVE/RESEARCH, tooltip/popup, ResizeObserver, cleanup `map.remove()`).
+
+## Contexte
+
+AlpiMonitor nécessite une carte interactive affichant les stations du bassin de la Borgne avec markers colorés. Bibliothèques candidates :
+
+- **Leaflet** : standard de facto, lib JS pure, léger, bien documenté
+- **MapLibre GL** : fork OSS de Mapbox, moderne, rendu WebGL, tuiles vectorielles
+- **OpenLayers** : puissant, SIG-friendly, plus verbeux
+- **Mapbox GL** : propriétaire, coût à l'usage
+
+## Décision
+
+On utilise **Leaflet 1.9** avec les tuiles **WMTS de swisstopo** comme fond de carte.
+
+## Conséquences
+
+### Positives
+
+- **Poids minimal** (~40 Ko gzipped) : cohérent avec l'objectif NFR-2.1.3 (payload < 300 Ko)
+- **API simple** : apprentissage rapide, pas de shader WebGL à comprendre
+- **Tuiles swisstopo officielles** : rendu reconnaissable par un public suisse, crédible pour CREALP, attribution claire
+- **Compatibilité Vue trivialement** : pas besoin d'un wrapper lourd, on instancie Leaflet dans un composable
+- **Markers custom faciles** : SVG inline pour les états colorés
+
+### Négatives
+
+- **Pas de tuiles vectorielles natives** : si on voulait des styles dynamiques complexes, MapLibre serait mieux. Hors scope v1.
+- **Rendu raster** : moins smooth qu'un rendu WebGL sur zoom/pan, mais acceptable pour ~10 markers
+
+## Conventions d'usage
+
+- Un composable `useLeafletMap` qui encapsule l'instanciation et le cleanup
+- Les markers sont des composants Vue qui reçoivent une ref vers la map et s'auto-enregistrent
+- Le basemap utilise la couche swisstopo `ch.swisstopo.pixelkarte-farbe` via WMTS
+- Attribution explicite `© swisstopo` dans le bottom-right de la map
+
+### Exemple de configuration tuiles
+
+```ts
+L.tileLayer(
+  'https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.pixelkarte-farbe/default/current/3857/{z}/{x}/{y}.jpeg',
+  {
+    attribution: '© swisstopo',
+    maxZoom: 17,
+  }
+).addTo(map);
+```
+
+## Accessibilité
+
+Leaflet n'est **pas entièrement accessible par défaut**. Contre-mesures :
+- Fournir systématiquement une **liste textuelle alternative** des stations (FR-1.1.5)
+- Markers navigables au clavier via `keyboard: true` sur Leaflet + gestion manuelle du focus
+- `aria-label` explicite sur chaque marker
+
+## Drifts d'implémentation (audit 2026-04-21)
+
+Deux écarts par rapport à la décision initiale, assumés après la livraison T2-C3 :
+
+### 1. Tuiles OpenStreetMap au lieu de swisstopo WMTS
+
+L'implémentation shipped utilise `https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png` plutôt que le flux WMTS swisstopo prévu (`ch.swisstopo.pixelkarte-farbe`).
+
+**Motivation** : OSM est free-for-all sans quota, tuiles disponibles en HTTPS direct, pas de dépendance à la disponibilité/politique d'usage de geo.admin.ch en environnement de démo (un recruteur peut ouvrir la carte à n'importe quelle heure sans risque de throttling). L'attribution est claire (`© OpenStreetMap contributors` dans `fr.json`). Le gain visuel spécifiquement suisse des tuiles swisstopo (toponymie détaillée, hydrographie officielle) est conservé au backlog v2 — le swap de tile provider est une ligne à changer dans `OStationMap.vue`.
+
+**Impact** : aucun sur la démonstration technique (Leaflet API identique, même config). Le récit "tuiles reconnaissables suisses" initial est troqué contre "stabilité + zero-cost attribution".
+
+### 2. Wrapper component `OStationMap.vue` plutôt que composable `useLeafletMap`
+
+La décision initiale prévoyait un composable `useLeafletMap` encapsulant l'instanciation. L'implémentation passe par un **organism wrapper** (`OStationMap.vue`) qui porte à la fois l'instanciation, le rendu et le cleanup, avec un **pur module de mapping** (`station-map-mapping.ts`) qui extrait la logique data → marker.
+
+**Motivation** : un composable Leaflet exposerait soit des refs mutables vers la map (fuite de l'imperatif hors du composant), soit une API déclarative qu'on reconstruit au-dessus de Leaflet (réinvention d'un vue-leaflet maison). Le split `OStationMap.vue` (dumb wrapper Leaflet) + `OMapSection.vue` (smart wrapper store) + `station-map-mapping.ts` (pure fonctions testables) atteint le même objectif de séparation des responsabilités avec une API plus simple. La logique Leaflet reste inspectable localement dans un seul composant.
+
+**Impact** : aucun sur la testabilité (le mapping pur est couvert par 6 tests unitaires dans `station-map-mapping.test.ts`).
+
+## Alternatives écartées
+
+### MapLibre GL
+
+Envisagée. Plus moderne, rendu vectoriel plus fluide. Écartée parce que :
+- Poids JS plus élevé (~200 Ko) pour un gain visuel faible sur notre cas
+- Complexité config tuiles vectorielles + style JSON vs Leaflet trivial
+- Pas de démonstration supplémentaire de compétence pour l'annonce
+
+### vue-leaflet (wrapper)
+
+Écartée. Ajoute une couche d'abstraction et des dépendances pour un gain marginal. On utilise Leaflet directement via un composable Vue maison — plus pédagogique, plus contrôlé.

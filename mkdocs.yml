@@ -1,0 +1,159 @@
+site_name: AlpiMonitor — Architecture
+site_description: Documentation arc42 du tableau de bord hydrologique AlpiMonitor
+site_url: https://docs.alpimonitor.fr
+site_author: sodigitaljeremy
+repo_url: https://github.com/sodigitaljeremy/alpimonitor
+repo_name: sodigitaljeremy/alpimonitor
+edit_uri: edit/main/docs/
+copyright: Données hydrologiques © OFEV/BAFU · Fond carto © OpenStreetMap contributors
+
+docs_dir: docs
+site_dir: site
+
+# During the arc42 migration (Phase 2), the legacy docs/ tree coexists with
+# the new 01-…/10-… arc42 folders. MkDocs would surface every legacy file
+# as an "orphan page" warning; excluding them keeps the build quiet and
+# scoped to the new tree. Once Phase 2 finishes the migration, these
+# entries collapse to nothing (the legacy dirs will have been moved).
+exclude_docs: |
+  # Pre-arc42 documentation tree archived under docs/_legacy/ on
+  # 2026-04-24. Kept in git history + filesystem for archaeology,
+  # excluded from the MkDocs site served on docs.alpimonitor.fr.
+  _legacy/
+  # docs/README.md is the contributor guide (how to build the site
+  # locally). It must not be rendered as a public page — MkDocs would
+  # otherwise treat it as a second index candidate and warn about a
+  # conflict with docs/index.md.
+  README.md
+
+theme:
+  name: material
+  language: fr
+  palette:
+    - media: '(prefers-color-scheme: light)'
+      scheme: default
+      primary: indigo
+      accent: amber
+      toggle:
+        icon: material/brightness-7
+        name: Thème sombre
+    - media: '(prefers-color-scheme: dark)'
+      scheme: slate
+      primary: indigo
+      accent: amber
+      toggle:
+        icon: material/brightness-4
+        name: Thème clair
+  features:
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.top
+    - navigation.tracking
+    - navigation.indexes
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.action.edit
+    - toc.follow
+  icon:
+    repo: fontawesome/brands/github
+
+plugins:
+  - search:
+      lang: fr
+  # mkdocs-material 9.x has native Mermaid support through superfences,
+  # but we keep mkdocs-mermaid2-plugin for explicit control over the
+  # Mermaid version and offline rendering. The plugin reuses the
+  # superfences `custom_fences` hook below (mermaid2.fence_mermaid_custom).
+  - mermaid2:
+      version: 10.9.1
+  # Kroki renders PlantUML (and 20+ other diagram syntaxes) by POSTing
+  # the source to a Kroki server. Default is kroki.io; swap to a
+  # self-hosted instance if bandwidth/privacy becomes an issue.
+  - kroki:
+      ServerURL: https://kroki.io
+      FileTypes:
+        - svg
+      # Disable block-diag family (not used) and Kroki's own Mermaid —
+      # Mermaid is handled by mkdocs-mermaid2-plugin above to avoid
+      # double-processing fenced ```mermaid blocks.
+      EnableBlockDiag: false
+      EnableMermaid: false
+  - awesome-pages
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - tables
+  - toc:
+      permalink: true
+      permalink_title: Lien vers cette section
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:mermaid2.fence_mermaid_custom
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+
+nav:
+  - Accueil: index.md
+  - 1. Introduction et objectifs: 01-introduction-and-goals/index.md
+  - 2. Contraintes et qualité: 02-constraints-and-quality/index.md
+  - 3. Contexte et périmètre:
+      - Vue d'ensemble: 03-context-and-scope/index.md
+      - Sources de données: 03-context-and-scope/data-sources.md
+  - 4. Stratégie de solution: 04-solution-strategy/index.md
+  - 5. Vue des blocs de construction:
+      - Vue d'ensemble: 05-building-block-view/index.md
+      - Frontend (Vue 3 + Pinia): 05-building-block-view/frontend.md
+      - Backend (Fastify + Prisma): 05-building-block-view/backend.md
+      - Persistence (PostgreSQL): 05-building-block-view/persistence.md
+  - 6. Vue d'exécution: 06-runtime-view/index.md
+  - 7. Vue de déploiement:
+      - Vue d'ensemble: 07-deployment-view/index.md
+      - Post-mortems:
+          - Index: 07-deployment-view/post-mortems/index.md
+          - 2026-04-21 DB vidée: 07-deployment-view/post-mortems/2026-04-21.md
+          - 2026-04-22 Archive EACCES: 07-deployment-view/post-mortems/2026-04-22-eacces.md
+          - 2026-04-22 Traefik multi-homing: 07-deployment-view/post-mortems/2026-04-22-traefik.md
+  - 8. Concepts transverses:
+      - Vue d'ensemble: 08-cross-cutting-concepts/index.md
+      - Design system: 08-cross-cutting-concepts/design-system.md
+      - Conventions: 08-cross-cutting-concepts/conventions.md
+  - 9. Décisions architecturales:
+      - Index ADR: 09-architectural-decisions/index.md
+      - ADR-001 TypeScript monostack: 09-architectural-decisions/adr-001.md
+      - ADR-002 ABEM: 09-architectural-decisions/adr-002.md
+      - ADR-003 Monolith over microservices: 09-architectural-decisions/adr-003.md
+      - ADR-004 Prisma ORM: 09-architectural-decisions/adr-004.md
+      - ADR-005 Leaflet for mapping: 09-architectural-decisions/adr-005.md
+      - ADR-006 D3 vanilla: 09-architectural-decisions/adr-006.md
+      - ADR-007 LINDAS SPARQL data source: 09-architectural-decisions/adr-007.md
+      - ADR-008 Station sourcing transparency: 09-architectural-decisions/adr-008.md
+      - ADR-009 Storybook scope: 09-architectural-decisions/adr-009.md
+      - ADR-010 Post-refactor architecture: 09-architectural-decisions/adr-010.md
+  - 10. Risques et dette:
+      - Vue d'ensemble: 10-risks-and-debt/index.md
+      - Audit refactor J16: 10-risks-and-debt/refactor-audit.md
+      - Findings passe C J17: 10-risks-and-debt/passe-c-findings.md
+      - Glossaire: 10-risks-and-debt/glossary.md
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/sodigitaljeremy/alpimonitor
+    - icon: fontawesome/solid/globe
+      link: https://alpimonitor.fr

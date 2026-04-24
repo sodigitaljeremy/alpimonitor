@@ -18,3 +18,7 @@ coverage/
 
 *storybook.log
 storybook-static
+
+# MkDocs build output + local docs venv (Phase 1+, Apr 2026)
+site/
+.venv-docs/
