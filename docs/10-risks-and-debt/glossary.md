@@ -5,7 +5,7 @@ Vocabulaire métier (hydrologie alpine, Valais) + technique (archi, conventions 
 ## A
 
 - **ABEM** — Atomic Design + convention de nommage BEM-like. Préfixes `a-` / `m-` / `o-` / `t-` / `p-` appliqués à 100 % des composants Vue d'AlpiMonitor. Voir [ADR-002](../09-architectural-decisions/adr-002.md).
-- **ADR** — Architectural Decision Record. Format court (≤ 5 pages) documentant une décision structurante : contexte, choix, conséquences, alternatives écartées. 10 ADR dans ce projet ([§9](../09-architectural-decisions/index.md)).
+- **ADR** — Architectural Decision Record. Format court (≤ 5 pages) documentant une décision structurante : contexte, choix, conséquences, alternatives écartées. 11 ADR dans ce projet ([§9](../09-architectural-decisions/index.md)).
 - **Alpine** — couleur jaune (`#F4C542`) du design system, accent chaud évoquant les pâturages d'altitude. Utilisée pour les marqueurs RESEARCH et les tokens SPARQL URI.
 - **arc42** — template de documentation architecturale en 12 sections, condensé ici en 10 (§2 fusionne Constraints + Quality, §10 fusionne Risks + Glossary). Source : [arc42.org](https://arc42.org).
 - **ApiError** — union discriminée TypeScript `{ kind: 'network' | 'http' | 'parse', ... }` dans `lib/api-client.ts`. Force chaque consumer à nommer sa branche d'échec via le compilateur.

@@ -34,7 +34,7 @@ Sortie : `site/` (HTML + assets prêts à servir par n'importe quel serveur HTTP
 | 6. Vue d'exécution | `06-runtime-view/` | Scénarios runtime critiques (ingestion cron, fetch UI, etc.) |
 | 7. Vue de déploiement | `07-deployment-view/` | Coolify, Traefik, post-mortems incidents |
 | 8. Concepts transverses | `08-cross-cutting-concepts/` | Design system, conventions, observabilité, sécurité |
-| 9. Décisions architecturales | `09-architectural-decisions/` | Les 10 ADR du projet, index navigable |
+| 9. Décisions architecturales | `09-architectural-decisions/` | Les 11 ADR du projet, index navigable |
 | 10. Risques et dette | `10-risks-and-debt/` | Audit refactor, findings passe C, glossaire |
 
 ## Diagrammes (Diagrams-as-Code)

@@ -4,14 +4,15 @@
 
 Tableau de bord hydrologique du bassin de la Borgne (Valais, Suisse) — projet de démonstration technique pour une candidature Front-End au [CREALP](https://www.crealp.ch).
 
-Consomme les données ouvertes de l'Office fédéral de l'environnement (OFEV/BAFU) via LINDAS SPARQL (cf. [ADR-007](./docs/architecture/adr/007-lindas-sparql-data-source.md)) et les met en scène pour une lecture rapide par les acteurs du territoire alpin.
+Consomme les données ouvertes de l'Office fédéral de l'environnement (OFEV/BAFU) via LINDAS SPARQL (cf. [ADR-007](./docs/09-architectural-decisions/adr-007.md)) et les met en scène pour une lecture rapide par les acteurs du territoire alpin.
 
 ## 🌐 Démo live
 
 - Application : <https://alpimonitor.fr>
 - API : <https://api.alpimonitor.fr/api/v1/health>
 - Observabilité : <https://api.alpimonitor.fr/api/v1/status>
-- Design system : <https://storybook.alpimonitor.fr> — 46 stories + 5 MDX (Atomic Design catalogue, cf. [ADR-009](./docs/architecture/adr/009-storybook-scope.md))
+- Design system : <https://storybook.alpimonitor.fr> — 46 stories + 5 MDX (Atomic Design catalogue, cf. [ADR-009](./docs/09-architectural-decisions/adr-009.md))
+- Documentation : <https://docs.alpimonitor.fr> — architecture arc42 en 10 sections (contexte, building blocks, runtime, deployment, 11 ADR, glossaire), cf. [ADR-011](./docs/09-architectural-decisions/adr-011.md)
 
 L'application est déployée en continu via Coolify sur push `main`. Les données affichées sont temps réel — le cron LINDAS agrège les débits du Rhône valaisan toutes les 10 minutes.
 
@@ -31,8 +32,8 @@ _Captures générées automatiquement via [`scripts/screenshots.mjs`](./scripts/
 
 - 13 jours de développement pour une candidature CREALP (deadline 30 avril 2026)
 - 173 tests automatisés verts en CI (71 backend + 102 frontend)
-- 10 ADR documentées dont 2 avec drifts d'implémentation assumés
-- Pivot technique majeur en cours de projet : XML OFEV → LINDAS SPARQL ([ADR-007](./docs/architecture/adr/007-lindas-sparql-data-source.md))
+- 11 ADR documentées dont 2 avec drifts d'implémentation assumés
+- Pivot technique majeur en cours de projet : XML OFEV → LINDAS SPARQL ([ADR-007](./docs/09-architectural-decisions/adr-007.md))
 - Production stable depuis 2026-04-20, ingestion 24/7 sans incident
 - Architecture claire : monorepo pnpm, Atomic Design ABEM, hexagonal API, Docker multi-stage
 
@@ -100,27 +101,28 @@ Les domaines `alpimonitor.fr`, `www.alpimonitor.fr` et `api.alpimonitor.fr` sont
 
 Quelques décisions assumées et documentées :
 
-- **LINDAS SPARQL plutôt que XML OFEV** ([ADR-007](./docs/architecture/adr/007-lindas-sparql-data-source.md)) — le flux XML `hydroweb.xml` renvoie 404 depuis la migration BAFU vers la plateforme LINDAS. Pivot en cours de projet.
-- **Single-page scrollable plutôt que multi-pages** ([PRD §3.2](./docs/product/prd.md)) — densité d'impression recruteur en moins de 30 secondes.
-- **Tuiles OSM plutôt que swisstopo WMTS** ([ADR-005 drift](./docs/architecture/adr/005-leaflet-for-mapping.md)) — stabilité et zero-cost attribution pour la démo.
-- **Atomic Design ABEM strict** ([ADR-002](./docs/architecture/adr/002-abem-methodology.md)) — préfixes `a-` / `m-` / `o-` / `t-` / `p-` sur 100% des composants Vue.
-- **Transparence du sourcing des stations research** ([ADR-008](./docs/architecture/adr/008-station-sourcing-transparency.md)) — champ `sourcingStatus` orthogonal à `dataSource` distingue `CONFIRMED` (crealp.ch documenté) de `ILLUSTRATIVE` (placement plausible démo).
-- **Storybook exhaustif, exclusions assumées** ([ADR-009](./docs/architecture/adr/009-storybook-scope.md)) — 15 composants présentationnels storyisés ; 3 organisms Pinia + Leaflet + router volontairement exclus pour éviter de mocker l'infra.
-- **Façades feature-grouped + `lib/` domain-scoped** ([ADR-010](./docs/architecture/adr/010-post-refactor-architecture.md)) — pattern post-refactor : `composables/stations/` expose 3 façades read-only, aucun consumer prod n'importe `useStationsStore` directement (règle vérifiée par grep).
+- **LINDAS SPARQL plutôt que XML OFEV** ([ADR-007](./docs/09-architectural-decisions/adr-007.md)) — le flux XML `hydroweb.xml` renvoie 404 depuis la migration BAFU vers la plateforme LINDAS. Pivot en cours de projet.
+- **Single-page scrollable plutôt que multi-pages** ([§3.3 périmètre](./docs/03-context-and-scope/index.md)) — densité d'impression recruteur en moins de 30 secondes.
+- **Tuiles OSM plutôt que swisstopo WMTS** ([ADR-005 drift](./docs/09-architectural-decisions/adr-005.md)) — stabilité et zero-cost attribution pour la démo.
+- **Atomic Design ABEM strict** ([ADR-002](./docs/09-architectural-decisions/adr-002.md)) — préfixes `a-` / `m-` / `o-` / `t-` / `p-` sur 100% des composants Vue.
+- **Transparence du sourcing des stations research** ([ADR-008](./docs/09-architectural-decisions/adr-008.md)) — champ `sourcingStatus` orthogonal à `dataSource` distingue `CONFIRMED` (crealp.ch documenté) de `ILLUSTRATIVE` (placement plausible démo).
+- **Storybook exhaustif, exclusions assumées** ([ADR-009](./docs/09-architectural-decisions/adr-009.md)) — 15 composants présentationnels storyisés ; 3 organisms Pinia + Leaflet + router volontairement exclus pour éviter de mocker l'infra.
+- **Façades feature-grouped + `lib/` domain-scoped** ([ADR-010](./docs/09-architectural-decisions/adr-010.md)) — pattern post-refactor : `composables/stations/` expose 3 façades read-only, aucun consumer prod n'importe `useStationsStore` directement (règle vérifiée par grep).
 - **Lecture seule, pas d'auth** — l'épopée admin (alertes, seuils, JWT) est volontairement hors scope candidature.
 
 ## 📚 Documentation
 
-Pour un aperçu rapide du projet : [`docs/STATUS.md`](./docs/STATUS.md) (snapshot une page).
+Navigation complète sur **[docs.alpimonitor.fr](https://docs.alpimonitor.fr)** — site arc42 en 10 sections :
 
-Pour aller plus loin :
+- [§1 Introduction et objectifs](./docs/01-introduction-and-goals/index.md) + [§2 Contraintes et qualité](./docs/02-constraints-and-quality/index.md) — pitch + critères vérifiables + parties prenantes
+- [§3 Contexte et périmètre](./docs/03-context-and-scope/index.md) + [sources de données](./docs/03-context-and-scope/data-sources.md) — C4 Context + LINDAS + sourcing stations
+- [§4 Stratégie de solution](./docs/04-solution-strategy/index.md) + [§5 Building blocks](./docs/05-building-block-view/index.md) — stack top-level + C4 Containers + composants frontend/backend/persistence
+- [§6 Runtime view](./docs/06-runtime-view/index.md) + [§7 Deployment view](./docs/07-deployment-view/index.md) — 3 scénarios sequence + Coolify topology + 3 post-mortems incidents
+- [§8 Cross-cutting concepts](./docs/08-cross-cutting-concepts/index.md) — design system, conventions, observabilité, sécurité
+- [§9 Décisions architecturales](./docs/09-architectural-decisions/index.md) — 11 ADR (format Date/Statut/Contexte/Décision/Conséquences/Alternatives)
+- [§10 Risques et dette](./docs/10-risks-and-debt/index.md) + [glossaire 36 termes](./docs/10-risks-and-debt/glossary.md) — non-scope candidature + dette assumée + audit refactor
 
-- [`docs/context/`](./docs/context/) — contexte métier, CREALP, sources de données
-- [`docs/product/`](./docs/product/) — brief, PRD annoté avec statuts d'implémentation
-- [`docs/architecture/`](./docs/architecture/) — overview C4, schéma Prisma, contrats API, 10 ADR
-- [`docs/ui/`](./docs/ui/) — design system tokens et composants
-- [`docs/runbooks/`](./docs/runbooks/) — post-mortems incidents prod
-- [`docs/workflow/`](./docs/workflow/) — conventions Git, code, commits
+Le contenu pré-arc42 (context métier, PRD, runbooks, design-system legacy) reste accessible sous [`docs/_legacy/`](./docs/_legacy/) pour archéologie git — migré verbatim vers les sections arc42 ci-dessus, conservé pour traçabilité.
 
 Le point d'entrée pour toute session Claude Code est [`CLAUDE.md`](./CLAUDE.md).
 
@@ -129,7 +131,7 @@ Le point d'entrée pour toute session Claude Code est [`CLAUDE.md`](./CLAUDE.md)
 Les tags git marquent les phases livrées, à lire dans l'ordre :
 
 - [`v1.0.0-crealp`](https://github.com/sodigitaljeremy/alpimonitor/releases/tag/v1.0.0-crealp) — Livrable candidature initial : landing live, ingestion LINDAS temps réel, 7 stations cartographiées, Lighthouse Desktop 96/100/100/100.
-- [`v1.1.0-refactor`](https://github.com/sodigitaljeremy/alpimonitor/releases/tag/v1.1.0-refactor) — Design system + architecture : Storybook exhaustif (46 stories, cf. [ADR-009](./docs/architecture/adr/009-storybook-scope.md)) et refactor architecture (façades feature-grouped, `lib/` domain-scoped, règle « aucun consumer prod hors façades » enforced, cf. [ADR-010](./docs/architecture/adr/010-post-refactor-architecture.md)).
+- [`v1.1.0-refactor`](https://github.com/sodigitaljeremy/alpimonitor/releases/tag/v1.1.0-refactor) — Design system + architecture : Storybook exhaustif (46 stories, cf. [ADR-009](./docs/09-architectural-decisions/adr-009.md)) et refactor architecture (façades feature-grouped, `lib/` domain-scoped, règle « aucun consumer prod hors façades » enforced, cf. [ADR-010](./docs/09-architectural-decisions/adr-010.md)).
 
 ## Licence et attributions
 

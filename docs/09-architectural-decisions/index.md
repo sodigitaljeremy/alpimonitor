@@ -1,6 +1,6 @@
 # §9 — Décisions architecturales
 
-Les 10 ADR du projet, classées par ordre chronologique et par numéro (qui reflète l'ordre temporel). Chaque ADR suit la même structure : **Date / Statut / Implémentation (hashes) / Contexte / Décision / Conséquences (Positives / Négatives / Trade-offs assumés) / Alternatives écartées / Références**.
+Les 11 ADR du projet, classées par ordre chronologique et par numéro (qui reflète l'ordre temporel). Chaque ADR suit la même structure : **Date / Statut / Implémentation (hashes) / Contexte / Décision / Conséquences (Positives / Négatives / Trade-offs assumés) / Alternatives écartées / Références**.
 
 ## Tableau récapitulatif
 
@@ -16,11 +16,12 @@ Les 10 ADR du projet, classées par ordre chronologique et par numéro (qui refl
 | [ADR-008](adr-008.md) | Transparence du sourcing des stations CREALP | Acceptée — implémentée | 2026-04-22 | Champ `sourcingStatus` CONFIRMED / ILLUSTRATIVE orthogonal à `dataSource` |
 | [ADR-009](adr-009.md) | Périmètre Storybook et exclusions | Acceptée — implémentée | 2026-04-23 | 15 composants storyisés, 3 organismes Pinia + Leaflet exclus |
 | [ADR-010](adr-010.md) | Architecture frontend post-refactor | Acceptée — implémentée | 2026-04-23 | Façades feature-grouped, `lib/` domain-scoped, règles enforced |
+| [ADR-011](adr-011.md) | Infrastructure de documentation arc42 | Acceptée — implémentée | 2026-04-24 | Site MkDocs Material sur `docs.alpimonitor.fr`, 10 sections, C4 Structurizr, deploy Coolify |
 
 ## Notes de lecture
 
 - **ADR-005 a un drift documenté** — la décision initiale visait swisstopo WMTS, la réalité tourne sur OpenStreetMap (stabilité + zero-cost attribution). Trace conservée, pas de superseded.
 - **ADR-007 est un pivot structurant** — survenu en cours de sprint (J4), il a invalidé toute la section ingestion du PRD initial. L'API, le modèle de données, et les conventions de sourcing en héritent.
-- **ADR-008 et ADR-010 sont les plus récents** — ils capturent les décisions post-livraison candidature (session Option A + refactor post-Storybook). Leur densité narrative est la plus élevée du corpus.
+- **ADR-008, ADR-010, ADR-011 sont les plus récents** — ils capturent les décisions post-livraison candidature (session Option A + refactor post-Storybook + documentation arc42). Leur densité narrative est la plus élevée du corpus.
 
 Les ADR sont aussi servies sur la branche `main` du repo GitHub sous [`docs/architecture/adr/`](https://github.com/sodigitaljeremy/alpimonitor/tree/main/docs/architecture/adr) — même contenu verbatim, accessible hors site MkDocs pour archéologie git.
