@@ -43,6 +43,7 @@ const currentYear = new Date().getFullYear();
                 target="_blank"
                 rel="noopener noreferrer"
               >
+                <AIcon name="docs" :size="16" />
                 <span>{{ t('footer.links.docs') }}</span>
                 <AIcon name="external" :size="14" />
               </a>

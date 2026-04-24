@@ -134,7 +134,7 @@
     "linksTitle": "Liens",
     "links": {
       "github": "Code source sur GitHub",
-      "adr": "Décision technique : pivot vers LINDAS (ADR-007)",
+      "docs": "Documentation technique",
       "linkedin": "Jeremy Soriano — LinkedIn",
       "linkedinAriaLabel": "Profil LinkedIn de Jeremy Soriano"
     },

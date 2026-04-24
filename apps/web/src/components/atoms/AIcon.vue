@@ -8,6 +8,7 @@ type Name =
   | 'external'
   | 'github'
   | 'linkedin'
+  | 'docs'
   | 'close'
   | 'check'
   | 'info';
@@ -74,6 +75,10 @@ withDefaults(
       <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-4 0v7h-4v-7a6 6 0 0 1 6-6z" />
       <rect x="2" y="9" width="4" height="12" />
       <circle cx="4" cy="4" r="2" fill="currentColor" />
+    </template>
+    <template v-else-if="name === 'docs'">
+      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+      <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
     </template>
     <template v-else-if="name === 'close'">
       <path d="m6 6 12 12" />
