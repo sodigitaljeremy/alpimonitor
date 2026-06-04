@@ -74,6 +74,12 @@ enum IngestionSourceKind {
   LINDAS_HYDRO
 }
 
+// Outcome of a single LLM call — AI layer observability (ADR-012, extension D).
+enum LlmCallStatus {
+  SUCCESS
+  ERROR
+}
+
 // ---------- Models ----------
 
 model Catchment {
@@ -269,4 +275,24 @@ model Insight {
   // Cache key: one narrative per (station, parameter, window, language, inputHash).
   @@unique([stationId, parameter, windowFrom, windowTo, language, inputHash])
   @@index([stationId, parameter, generatedAt(sort: Desc)])
+}
+
+// One row per LLM call — observability layer (ADR-012, extension D).
+// Written by the ObservingLlmClient decorator around every provider call,
+// success or failure. Mirrors IngestionRun's discipline for the LLM side:
+// provider/model provenance, tokens, cost, latency. Read by GET /ai/status.
+model LlmCallRun {
+  id               String        @id @default(cuid())
+  provider         String // e.g. "mistral" (direct in A) / "litellm" (proxy, D-ready)
+  model            String
+  operation        String // e.g. "narration"
+  status           LlmCallStatus
+  errorKind        String? // the LlmError kind on failure (config/network/http/timeout/parse)
+  promptTokens     Int?
+  completionTokens Int?
+  costUsd          Float?
+  latencyMs        Int
+  createdAt        DateTime      @default(now())
+
+  @@index([createdAt(sort: Desc)])
 }
