@@ -24,7 +24,7 @@ Tables du schéma :
 - **`Measurement`** — séries temporelles. Contrainte unique `(sensorId, recordedAt)` — socle de l'idempotence de l'upsert. Alimenté exclusivement par le cron LINDAS.
 - **`IngestionRun`** — trace chaque tick du cron. Champs : `source`, `status` (`SUCCESS` | `FAILURE` | `PARTIAL`), `startedAt`, `completedAt`, `stationsSeenCount`, `measurementsCreatedCount` (lignes **réellement insérées** via `createMany`), `measurementsUnchangedCount` (lignes ré-vues idempotentes — cf. D0), `measurementsSkippedCount`, `errorMessage?`, `httpStatus?`, `payloadBytes?`, `payloadHash?`, `durationMs`. Lu par `/api/v1/status`.
 - **`Threshold`** — seuils `VIGILANCE` / `ALERT` par station + paramètre (seedés en dur v1, pas d'admin UI).
-- **`Alert`** — ouvertures/fermetures d'alertes (schéma en place, évaluation hors scope v1).
+- **`Alert`** — épisodes d'anomalie. *Schéma en place depuis l'init (2026-04-20), **réactivé sans migration** par la couche IA, extension B ([ADR-012](../09-architectural-decisions/adr-012.md)).* Champs : `stationId`, `type` (`STATISTICAL_ANOMALY` | `THRESHOLD_EXCEEDED` | `STATION_OFFLINE`), `level` (`INFO` | `VIGILANCE` | `ALERT`), `parameter`, `triggerValue`, `thresholdValue?`, `openedAt`, `closedAt?` (null tant que l'épisode est ouvert), `metadata` (JSON). Invariant **une seule alerte ouverte par `{stationId, parameter}`** maintenu par `alerts-service.ts` (ouvre / met à jour en place / ferme). `metadata` porte les **stats groundées** du verdict : `mean`, `std`, `z`, `sampleSize`, **`hourBucket`** (heure UTC 0–23, clé du bucket déseasonnalisé B1-bis), **`bucketSampleSize`** (points même-heure ayant servi au μ/σ), `windowFrom`/`windowTo`. Lu par `GET /alerts` ; le `COUNT` des alertes ouvertes par station alimente `activeAlertsCount` sur `/stations`.
 - **`Glacier`**, **`StationGlacier`** — glaciers du bassin (Ferpècle, Mont Miné), jonction station ↔ glacier.
 - **`Withdrawal`** — captages Grande Dixence (Ferpècle 1896 m, Arolla 2009 m).
 - **`User`**, **`ThresholdAudit`** — schéma présent mais non utilisé v1 (admin JWT hors scope).
@@ -60,7 +60,7 @@ Tables du schéma :
 
 `pruneStaleStations(currentOfevCodes)` supprime les `Station` dont `ofevCode` n'est pas dans la liste seed actuelle — cascade `Measurement`, `Alert`, `Threshold`, `Sensor`, `StationGlacier`. C'est l'opération qui aurait pu causer l'incident 2026-04-21 si un seed stale avait été lancé contre prod (non prouvé, cf. post-mortem).
 
-Le seed **ne touche jamais** `Measurement`, `Alert`, `IngestionRun`, `Insight`, `LlmCallRun` — tables opérationnelles, écrites exclusivement par le cron (ou la couche IA pour `Insight` / `LlmCallRun`).
+Le seed **ne touche jamais** `Measurement`, `Alert`, `IngestionRun`, `Insight`, `LlmCallRun` — tables opérationnelles, écrites exclusivement par le cron (`Measurement` / `IngestionRun`) ou la couche IA (`Insight` / `LlmCallRun` ; `Alert` via le scan d'anomalie post-ingestion, ADR-012 B).
 
 ## 5.P.5 Observabilité côté DB
 
