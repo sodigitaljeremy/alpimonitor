@@ -13,12 +13,20 @@ apps/api/src/
 ├── routes/            # Définition Fastify (route + schema Zod + handler)
 │   ├── health.ts      # GET /api/v1/health
 │   ├── status.ts      # GET /api/v1/status
-│   └── stations.ts    # GET /api/v1/stations + GET /api/v1/stations/:id/measurements
+│   └── stations.ts    # GET /stations, /stations/:id/measurements, /stations/:id/narrative
 ├── services/          # Orchestration métier (use cases)
+│   ├── stations-service.ts
+│   └── narrative-service.ts  # mesures → features → narration (couche IA, ADR-012)
+├── ai/                # Couche IA (ADR-012, extension A)
+│   ├── narration-features.ts # extraction de features pure et groundée (A2)
+│   ├── llm-client.ts         # interface LlmClient isolée + impl Mistral (A3)
+│   ├── narration-prompt.ts   # prompt déterministe + PROMPT_VERSION (A3)
+│   └── narration-service.ts  # cache Insight idempotent + générateur (A3)
 ├── domain/            # Entités métier pures (sans dépendance framework)
 ├── plugins/           # Plugins Fastify transverses
 │   ├── cors.ts        # CORS allowlist via CORS_ORIGINS
 │   ├── prisma.ts      # Singleton PrismaClient
+│   ├── llm.ts         # Singleton LlmClient (Mistral ; LiteLLM en D)
 │   ├── ingestion.ts   # Cron 10 min + orchestration ingestion
 │   └── ...
 ├── ingestion/
@@ -36,12 +44,13 @@ Les couches `domain/` + `services/` sont fines aujourd'hui — le code principal
 
 ## 5.B.2 Endpoints REST
 
-Tous versionnés sous `/api/v1`, base URL conventionnelle. Quatre endpoints en production :
+Tous versionnés sous `/api/v1`, base URL conventionnelle. Cinq endpoints :
 
 - **`GET /api/v1/health`** — liveness probe minimaliste. Non authentifié. `{ status, timestamp, database }`. Retourne 503 si Postgres est inaccessible. Consommé par Coolify/Traefik pour déterminer si le container est prêt à recevoir du trafic.
 - **`GET /api/v1/status`** — observabilité élargie. Non authentifié. Expose `ingestion.lastRun` (dernier `IngestionRun`), `ingestion.lastSuccessAt`, `ingestion.healthyThresholdMinutes`, `ingestion.today.{runsCount, measurementsCreatedSum, successRate}`. Consommé par le badge `MStatusBadge` dans `OHeroSection` (polling 60 s).
 - **`GET /api/v1/stations`** — liste des stations actives avec leurs `latestMeasurements` par paramètre (`DISCHARGE`, `WATER_LEVEL`). Champs clés : `ofevCode`, `dataSource` (`LIVE` | `RESEARCH` | `SEED`), `sourcingStatus` (`CONFIRMED` | `ILLUSTRATIVE`). Query params : `catchmentId?`, `isActive?`.
 - **`GET /api/v1/stations/:id/measurements`** — séries temporelles d'une station sur une fenêtre `[from, to]`. Query params obligatoires : `from`, `to` (ISO 8601). Optionnel : `parameter=DISCHARGE`. Retourne `{ data: { stationId, from, to, aggregate: 'raw', series: MeasurementSeries[] } }`.
+- **`GET /api/v1/stations/:id/narrative`** — résumé LLM groundé d'un paramètre sur une fenêtre (couche IA, [ADR-012](../09-architectural-decisions/adr-012.md)). Query params : `parameter` (requis), `from`, `to` (ISO 8601), `lang?` (défaut `fr`). Validation Zod ; **404** station inconnue, **400** requête invalide. La couche IA ne renvoie jamais d'erreur HTTP : réponse **200** avec un état métier `state: generated | cached | unavailable` (+ `reason: insufficient_data | llm_error | config_error`), `text` (null si indisponible) et `grounding` (trend, deltaAbs, deltaPct, status, completeness) exposé pour transparence. DTO `StationNarrativeDTO` dans `packages/shared`.
 
 Chaque endpoint est typé via un schéma Zod (`schemas/`) appliqué à la fois en validation request et en shape response. Les DTO sont définis dans `packages/shared/src/types/` — même source de vérité côté front et back.
 
@@ -84,3 +93,16 @@ Cinq épopées PRD sont explicitement hors scope v1 (admin thresholds, alerts CR
 3. `exec node dist/index.js` — `exec` pour que `tini` (PID 1) forwarde les signaux directement à Node.
 
 Le seed n'insère que les tables de **contexte** (stations, glaciers, captages, seuils) via `upsert` idempotent. Les tables **opérationnelles** (`Measurement`, `IngestionRun`, `Alert`) sont exclusivement alimentées par le cron. Un re-seed ne détruit jamais l'historique ingéré.
+
+## 5.B.6 Couche IA — narration (ADR-012, extension A)
+
+Couche **additive et isolée** : elle consomme les sorties existantes sans modifier le flux LINDAS → Prisma → API. Flux d'un appel `GET /stations/:id/narrative` :
+
+1. **Mesures** — `narrative-service.ts` réutilise `getStationMeasurements` (raw, fenêtre `[from, to]`) — d'où le **404** station inconnue hérité.
+2. **Features** — `ai/narration-features.ts` (fonction pure) calcule les indicateurs groundés : delta absolu (+ %), valeurs début/fin, min/max, complétude (points présents/attendus, `sparse`, plus grand trou), statut vs seuils (`NORMAL`/`VIGILANCE`/`ALERT` ou `null`), tendance classifiée. Cadence de complétude : `INGESTION_INTERVAL_MINUTES` (adossée au cron, `ingestion/cadence.ts`).
+3. **Garde-fou** — données insuffisantes (`!hasData` ou pas de delta) ⇒ `state: 'unavailable'` (`reason: 'insufficient_data'`), **aucun appel LLM**.
+4. **Narration** — `ai/narration-service.ts` calcule un `inputHash` (sha256 de features + `PROMPT_VERSION` + langue + modèle) et lit le cache `Insight` ; **cache hit ⇒ pas d'appel LLM** (`state: 'cached'`). Sinon il appelle Mistral via l'interface isolée `LlmClient` (`ai/llm-client.ts`), persiste l'`Insight` (texte + provenance + tokens/latence ; `costUsd` null jusqu'à D) et renvoie `state: 'generated'`.
+5. **Grounding STRICT** — le LLM ne reçoit que les features ; il les *reformule*, ne prédit ni n'invente. Sortie étiquetée « résumé assisté par IA » côté UI.
+6. **Dégradation gracieuse** — toute erreur LLM (`config`/`network`/`http`/`timeout`/`parse`) devient `state: 'unavailable'` (`reason: 'llm_error' | 'config_error'`), jamais une 5xx : l'enrichissement est non-critique et ne pollue pas le monitoring d'erreurs serveur.
+
+**Interface `LlmClient`** : A appelle **Mistral** directement (clé `MISTRAL_API_KEY`, server-side only). **D** insérera un proxy **LiteLLM** *derrière la même interface* — bascule transparente, le service narration ne change pas. Observabilité fine (coût) et fallback multi-modèles arrivent avec D.

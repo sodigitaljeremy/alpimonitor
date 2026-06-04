@@ -99,22 +99,19 @@ alpimonitor/
 
 > **À mettre à jour à la fin de chaque session Claude Code.**
 
-**Date dernière mise à jour** : 2026-04-22 (après-midi, après session Option A transparence sourcing)
+**Date dernière mise à jour** : 2026-06-04 (session couche IA — extension A « narration » livrée sur `feat/ai-layer`)
 **Deadline candidature CREALP** : 2026-04-30
 **Production live** : https://alpimonitor.fr (SPA) + https://api.alpimonitor.fr (API). Auto-deploy sur push `main` via Coolify + GitHub App `sodigitaljeremy`.
 
 ### Next session pickup
 
-> Tu reprends après la **session Option A — transparence du sourcing des stations** (pivot stratégique candidature). Avant de bosser : lis `CLAUDE.md` (cette section + État courant), `docs/STATUS.md`, [ADR-008](docs/architecture/adr/008-station-sourcing-transparency.md), [`docs/context/crealp-stations-sourcing.md`](docs/context/crealp-stations-sourcing.md), et les 3 runbooks `docs/runbooks/incident-2026-04-21.md`, `incident-2026-04-22-traefik-multihoming.md`, `incident-2026-04-22-archive-eacces.md`. Pas besoin de relire toute l'histoire.
+> Tu reprends après la **session couche IA (objectif INTELLITEK)** : audit de réappropriation + démarrage de la couche IA. Avant de bosser : lis `docs/audit/intellitek-audit.md` (carto/gap/mapping/extensions) et [ADR-012](docs/09-architectural-decisions/adr-012.md) (cadrage couche IA, ordre **A→D→B→C**, statut). Tout vit sur la branche **`feat/ai-layer`** (jamais `main`, tags `v1.x` protégés).
 
-**État commits locaux (non pushés au dernier snapshot) :**
+**Extension A (narration LLM) — LIVRÉE** sur `feat/ai-layer` (8 commits, voir hashes dans ADR-012) : modèle `Insight` (cache idempotent), `computeNarrationFeatures` (pur, groundé), client **Mistral** derrière interface `LlmClient` isolée, endpoint `GET /stations/:id/narrative` (dégradation gracieuse `generated|cached|unavailable`, grounding exposé), façade `useStationNarrative` + bouton « Générer le résumé » dans le drawer. Smoke test Mistral réel OK (prompt v4, texte FR fidèle aux features). Clé via `MISTRAL_API_KEY` (`.env` gitignored, `.env.example` vide).
 
-- `8f9ffb5` feat(api): add sourcingStatus field to Station model
-- `fb94f5a` feat(api): expose sourcingStatus on /stations endpoint
-- `b5af019` feat(web): add sourcing status badge on research station cards
-- `<hash>` docs(context): document station sourcing transparency (ADR-008) — rédaction en cours / fin de session Option A
+**Prochaine étape — extension D (observabilité LiteLLM)** : insérer un proxy LiteLLM **derrière la même interface `LlmClient`** (bascule transparente), modèle `LlmCallRun` (coût/latence/tokens), `GET /api/v1/ai/status` + badge réutilisant `MStatusBadge`. Puis B (anomalie, réactive `Alert`), puis C (chat/RAG, frontière `QueryPort`/`PrismaQueryAdapter` = « hexagonal » réel). Point d'arrêt défendable = A+D+B.
 
-**Prochaine étape (point 5) :** push groupé + polling Coolify 90s + validation prod (badges visibles sur https://alpimonitor.fr, `curl /api/v1/stations | jq '.data[] | select(.dataSource=="RESEARCH") | {name, sourcingStatus}'` conforme, re-run axe-core pour confirmer pas de régression a11y).
+**Env dev couche IA** : postgres dev up (`docker compose up -d postgres`), seed appliqué, mesures de démo insérées pour Sion (2011). `feat/ai-layer` non poussée / non mergée (audit en cours de validation, prod intacte).
 
 **Sans nouveau tag** : `v1.0.0-crealp` reste sur le commit de fin Bloc 4 (`0eaaad1`). La session Option A enrichit le v1 post-tag sans cérémonie v1.0.1.
 
@@ -148,7 +145,7 @@ alpimonitor/
 | Observabilité | `pino` JSON stdout + `/health` + `/status` | `IngestionRun` persiste chaque tick |
 | CI | GitHub Actions, Node 20, pnpm 10.33.0 | lint + typecheck + test + build sur push main + PR |
 | Déploiement | Coolify (auto-deploy push main) + Traefik + Let's Encrypt | VPS Hetzner `95.216.196.69` |
-| Tests | Vitest + @vue/test-utils + Testing Library | 71 API + 102 web = 173 (état courant post-`v1.1.0-refactor`) |
+| Tests | Vitest + @vue/test-utils + Testing Library | 173 sur `main` (71 API + 102 web) ; **228 sur `feat/ai-layer`** (120 API + 108 web) après extension A couche IA |
 
 ### Historique des sessions
 

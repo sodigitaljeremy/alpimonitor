@@ -17,13 +17,13 @@ Les 12 ADR du projet, classées par ordre chronologique et par numéro (qui refl
 | [ADR-009](adr-009.md) | Périmètre Storybook et exclusions | Acceptée — implémentée | 2026-04-23 | 15 composants storyisés, 3 organismes Pinia + Leaflet exclus |
 | [ADR-010](adr-010.md) | Architecture frontend post-refactor | Acceptée — implémentée | 2026-04-23 | Façades feature-grouped, `lib/` domain-scoped, règles enforced |
 | [ADR-011](adr-011.md) | Infrastructure de documentation arc42 | Acceptée — implémentée | 2026-04-24 | Site MkDocs Material sur `docs.alpimonitor.fr`, 10 sections, C4 Structurizr, deploy Coolify |
-| [ADR-012](adr-012.md) | Introduction d'une couche IA | Proposée — cadrage | 2026-06-04 | Narration LLM → observabilité LiteLLM → anomalie → chat/RAG ; couche additive isolée, `feat/ai-layer` |
+| [ADR-012](adr-012.md) | Introduction d'une couche IA | Acceptée — A livrée ; D/B/C proposées | 2026-06-04 | Narration LLM (Mistral) livrée sur `feat/ai-layer` ; observabilité LiteLLM → anomalie → chat/RAG à venir |
 
 ## Notes de lecture
 
 - **ADR-005 a un drift documenté** — la décision initiale visait swisstopo WMTS, la réalité tourne sur OpenStreetMap (stabilité + zero-cost attribution). Trace conservée, pas de superseded.
 - **ADR-007 est un pivot structurant** — survenu en cours de sprint (J4), il a invalidé toute la section ingestion du PRD initial. L'API, le modèle de données, et les conventions de sourcing en héritent.
 - **ADR-008, ADR-010, ADR-011 sont les plus récents** — ils capturent les décisions post-livraison candidature (session Option A + refactor post-Storybook + documentation arc42). Leur densité narrative est la plus élevée du corpus.
-- **ADR-012 est la seule ADR au statut « Proposée »** — elle cadre la couche IA *avant* tout code (règle « cadrer avant d'agir »). C'est aussi là que l'« hexagonal » jamais implémenté devient un objectif réel et localisé (frontière port/adapter du chat/RAG). Les hashes d'implémentation y seront ajoutés au fil des livraisons sur `feat/ai-layer`.
+- **ADR-012 cadre la couche IA, dont l'extension A (narration Mistral) est livrée** sur `feat/ai-layer` — les extensions D (observabilité LiteLLM), B (anomalie) et C (chat/RAG) restent proposées. C'est avec C que l'« hexagonal » jamais implémenté deviendra un objectif réel et localisé (frontière port/adapter). Le statut de l'ADR reflète explicitement le livré vs le à venir.
 
 Les ADR sont aussi servies sur la branche `main` du repo GitHub sous [`docs/architecture/adr/`](https://github.com/sodigitaljeremy/alpimonitor/tree/main/docs/architecture/adr) — même contenu verbatim, accessible hors site MkDocs pour archéologie git.
