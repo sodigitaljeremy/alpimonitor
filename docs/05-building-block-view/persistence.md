@@ -22,12 +22,13 @@ Tables du schéma :
 - **`Station`** — 7 stations seedées : 4 LIVE (BAFU via LINDAS) + 3 RESEARCH (CREALP Borgne). Champs clés : `id`, `ofevCode` (unique), `name`, `riverName`, `latitude`, `longitude`, `altitudeM`, `flowType` (`NATURAL` | `RESIDUAL` | `DOTATION`), `operatorName`, `dataSource` (`LIVE` | `RESEARCH` | `SEED`), `sourcingStatus` (`CONFIRMED` | `ILLUSTRATIVE`, cf. [ADR-008](../09-architectural-decisions/adr-008.md)), `isActive`.
 - **`Sensor`** — un par combinaison `{stationId, parameter}`. Paramètres : `DISCHARGE`, `WATER_LEVEL`, `TEMPERATURE` (non-ingested v1), `TURBIDITY` (non-ingested v1).
 - **`Measurement`** — séries temporelles. Contrainte unique `(sensorId, recordedAt)` — socle de l'idempotence de l'upsert. Alimenté exclusivement par le cron LINDAS.
-- **`IngestionRun`** — trace chaque tick du cron. Champs : `source`, `status` (`SUCCESS` | `FAILURE` | `PARTIAL`), `startedAt`, `completedAt`, `stationsSeenCount`, `measurementsCreatedCount`, `measurementsSkippedCount`, `errorMessage?`, `httpStatus?`, `payloadBytes?`, `payloadHash?`, `durationMs`. Lu par `/api/v1/status`.
+- **`IngestionRun`** — trace chaque tick du cron. Champs : `source`, `status` (`SUCCESS` | `FAILURE` | `PARTIAL`), `startedAt`, `completedAt`, `stationsSeenCount`, `measurementsCreatedCount` (lignes **réellement insérées** via `createMany`), `measurementsUnchangedCount` (lignes ré-vues idempotentes — cf. D0), `measurementsSkippedCount`, `errorMessage?`, `httpStatus?`, `payloadBytes?`, `payloadHash?`, `durationMs`. Lu par `/api/v1/status`.
 - **`Threshold`** — seuils `VIGILANCE` / `ALERT` par station + paramètre (seedés en dur v1, pas d'admin UI).
 - **`Alert`** — ouvertures/fermetures d'alertes (schéma en place, évaluation hors scope v1).
 - **`Glacier`**, **`StationGlacier`** — glaciers du bassin (Ferpècle, Mont Miné), jonction station ↔ glacier.
 - **`Withdrawal`** — captages Grande Dixence (Ferpècle 1896 m, Arolla 2009 m).
 - **`User`**, **`ThresholdAudit`** — schéma présent mais non utilisé v1 (admin JWT hors scope).
+- **`LlmCallRun`** — *couche IA, extension D ([ADR-012](../09-architectural-decisions/adr-012.md))*. Un enregistrement par appel LLM (succès/échec), écrit par le décorateur `ObservingLlmClient` : `provider`, `model`, `operation`, `status` (`SUCCESS`|`ERROR`), `errorKind?`, `promptTokens?`, `completionTokens?`, `costUsd?`, `latencyMs`, `createdAt`. Index `@@index([createdAt desc])`. Agrégé par `GET /ai/status`.
 - **`Insight`** — *couche IA, extension A ([ADR-012](../09-architectural-decisions/adr-012.md))*. Un enregistrement par narration LLM générée pour un couple `{stationId, parameter, fenêtre, langue}`. Champs : `parameter`, `windowFrom`, `windowTo`, `language` (défaut `fr`), `text`, provenance (`provider`, `model`, `inputHash`), métriques d'appel minimales (`promptTokens?`, `completionTokens?`, `costUsd?`, `latencyMs?`), `generatedAt`. Sert de **cache idempotent** via l'unique `(stationId, parameter, windowFrom, windowTo, language, inputHash)` : mêmes features groundées + version de prompt + langue ⇒ aucun rappel LLM. Calque la discipline de traçabilité d'`IngestionRun`.
 
 ## 5.P.2 Conventions
@@ -59,7 +60,7 @@ Tables du schéma :
 
 `pruneStaleStations(currentOfevCodes)` supprime les `Station` dont `ofevCode` n'est pas dans la liste seed actuelle — cascade `Measurement`, `Alert`, `Threshold`, `Sensor`, `StationGlacier`. C'est l'opération qui aurait pu causer l'incident 2026-04-21 si un seed stale avait été lancé contre prod (non prouvé, cf. post-mortem).
 
-Le seed **ne touche jamais** `Measurement`, `Alert`, `IngestionRun`, `Insight` — tables opérationnelles, écrites exclusivement par le cron (ou la couche IA pour `Insight`).
+Le seed **ne touche jamais** `Measurement`, `Alert`, `IngestionRun`, `Insight`, `LlmCallRun` — tables opérationnelles, écrites exclusivement par le cron (ou la couche IA pour `Insight` / `LlmCallRun`).
 
 ## 5.P.5 Observabilité côté DB
 
