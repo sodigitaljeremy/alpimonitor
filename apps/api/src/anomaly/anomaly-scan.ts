@@ -12,8 +12,13 @@ import { detectAnomaly } from './anomaly-detection.js';
 // only READS measurements, so it can never block or corrupt the critical
 // ingestion path. Pure detection lives in anomaly-detection.ts; this module is
 // the thin I/O shell around it.
+//
+// B1-bis: detection is now hour-of-day deseasonalised (the candidate is compared
+// to the same UTC hour of prior days, not the whole window). We load 14 days so
+// each hour bucket gets ~2 weeks of same-hour points — a robust per-hour σ that
+// the diurnal melt cycle no longer inflates.
 
-const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+const FOURTEEN_DAYS_MS = 14 * 24 * 60 * 60 * 1000;
 
 // Minimal logger surface (Fastify's app.log satisfies it) so this module need
 // not depend on Fastify types.
@@ -37,7 +42,7 @@ export interface AnomalyScanResult {
 
 export async function runAnomalyScan(deps: AnomalyScanDeps): Promise<AnomalyScanResult> {
   const now = deps.now ?? (() => new Date());
-  const referenceWindowMs = deps.referenceWindowMs ?? SEVEN_DAYS_MS;
+  const referenceWindowMs = deps.referenceWindowMs ?? FOURTEEN_DAYS_MS;
   const at = now();
   // Load a touch more than the reference window so the candidate point (the most
   // recent sample) always has a full trailing baseline behind it.
@@ -72,7 +77,6 @@ export async function runAnomalyScan(deps: AnomalyScanDeps): Promise<AnomalyScan
         // Hysteresis: an already-open episode uses the lower close threshold.
         previousState: openAlert ? 'open' : 'closed',
         referenceWindowMs,
-        expectedIntervalMinutes: INGESTION_INTERVAL_MINUTES,
       });
 
       const reconciled = await reconcileAnomalyAlert(deps.prisma, {

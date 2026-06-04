@@ -34,6 +34,10 @@ function buildMetadata(verdict: AnomalyVerdict): Record<string, number | string>
     std: verdict.stats.std,
     z: verdict.stats.z,
     sampleSize: verdict.stats.sampleSize,
+    // B1-bis: the μ/σ/z above are per-hour (deseasonalised); these expose which
+    // hour bucket and how many same-hour points they were built from.
+    hourBucket: verdict.stats.hourBucket,
+    bucketSampleSize: verdict.stats.bucketSampleSize,
     windowFrom: verdict.stats.window.from,
     windowTo: verdict.stats.window.to,
   };
