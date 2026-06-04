@@ -2,6 +2,7 @@ import fastifyCors from '@fastify/cors';
 import Fastify, { type FastifyInstance } from 'fastify';
 
 import { ingestionPlugin } from './plugins/ingestion.js';
+import { llmPlugin } from './plugins/llm.js';
 import { prismaPlugin } from './plugins/prisma.js';
 import { uptimePlugin } from './plugins/uptime.js';
 import { healthRoutes } from './routes/health.js';
@@ -36,6 +37,7 @@ export async function buildServer(): Promise<FastifyInstance> {
 
   await server.register(uptimePlugin);
   await server.register(prismaPlugin);
+  await server.register(llmPlugin);
   await server.register(ingestionPlugin);
   await server.register(healthRoutes, { prefix: '/api/v1' });
   await server.register(statusRoutes, { prefix: '/api/v1' });

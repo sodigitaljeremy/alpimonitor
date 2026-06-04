@@ -79,7 +79,6 @@ export function createMistralClient(opts: MistralClientOptions = {}): LlmClient 
   const timeoutMs = opts.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const temperature = opts.temperature ?? DEFAULT_TEMPERATURE;
   const maxTokens = opts.maxTokens ?? DEFAULT_MAX_TOKENS;
-  const doFetch = opts.fetchImpl ?? fetch;
   const clock = opts.now ?? Date.now;
 
   return {
@@ -90,6 +89,10 @@ export function createMistralClient(opts: MistralClientOptions = {}): LlmClient 
       if (!apiKey) {
         throw new LlmError('config', 'MISTRAL_API_KEY is not set');
       }
+
+      // Resolve fetch at call time (not at factory time) so a test that stubs
+      // the global after construction — and a runtime that swaps it — both work.
+      const doFetch = opts.fetchImpl ?? globalThis.fetch;
 
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), timeoutMs);
