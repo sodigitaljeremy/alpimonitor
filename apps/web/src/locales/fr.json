@@ -43,7 +43,22 @@
     "chartEmpty": "Aucune donnée pour les dernières 24h",
     "chartError": "Impossible de charger les mesures",
     "chartRetry": "Réessayer",
-    "viewOnHydrodaten": "Voir sur hydrodaten.admin.ch"
+    "viewOnHydrodaten": "Voir sur hydrodaten.admin.ch",
+    "narrative": {
+      "title": "Analyse",
+      "generate": "Générer le résumé",
+      "regenerate": "Régénérer",
+      "loading": "Génération du résumé…",
+      "aiLabel": "Résumé assisté par IA",
+      "ariaResult": "Résumé hydrologique assisté par IA",
+      "error": "Le résumé n'a pas pu être généré.",
+      "retry": "Réessayer",
+      "unavailable": {
+        "insufficient_data": "Données insuffisantes pour générer un résumé fiable sur cette fenêtre.",
+        "llm_error": "Le service de résumé est momentanément indisponible.",
+        "config_error": "Le service de résumé n'est pas configuré."
+      }
+    }
   },
   "keyMetrics": {
     "title": "Chiffres clés",

@@ -1,4 +1,4 @@
-import type { StationDTO, StationMeasurementsDTO } from '@alpimonitor/shared';
+import type { StationDTO, StationMeasurementsDTO, StationNarrativeDTO } from '@alpimonitor/shared';
 
 export interface IngestionLastRun {
   source: string;
@@ -42,6 +42,7 @@ export type ApiResponse<T> = { success: true; data: T } | { success: false; erro
 
 type StationsListResponse = { data: StationDTO[] };
 type StationMeasurementsResponse = { data: StationMeasurementsDTO };
+type StationNarrativeResponse = { data: StationNarrativeDTO };
 
 export interface StatusResponse {
   api: { status: 'ok'; uptimeSeconds: number };
@@ -63,6 +64,13 @@ export interface StationMeasurementsParams {
   parameter?: string;
   from?: Date;
   to?: Date;
+}
+
+export interface StationNarrativeParams {
+  parameter: string;
+  from: Date;
+  to: Date;
+  lang?: string;
 }
 
 /**
@@ -122,6 +130,16 @@ function buildMeasurementsPath(stationId: string, params: StationMeasurementsPar
     : `/stations/${stationId}/measurements?${qs}`;
 }
 
+function buildNarrativePath(stationId: string, params: StationNarrativeParams): string {
+  const search = new URLSearchParams({
+    parameter: params.parameter,
+    from: params.from.toISOString(),
+    to: params.to.toISOString(),
+  });
+  if (params.lang !== undefined) search.set('lang', params.lang);
+  return `/stations/${stationId}/narrative?${search.toString()}`;
+}
+
 /**
  * Typed entry points for every endpoint this frontend consumes. Consumers
  * (stores, composables) delegate here — no one else should call `fetch`
@@ -131,6 +149,8 @@ export const api = {
   getStations: () => request<StationsListResponse>('/stations'),
   getStationMeasurements: (stationId: string, params: StationMeasurementsParams) =>
     request<StationMeasurementsResponse>(buildMeasurementsPath(stationId, params)),
+  getStationNarrative: (stationId: string, params: StationNarrativeParams) =>
+    request<StationNarrativeResponse>(buildNarrativePath(stationId, params)),
   getStatus: () => request<StatusResponse>('/status'),
   getHealth: () => request<HealthResponse>('/health'),
 };
