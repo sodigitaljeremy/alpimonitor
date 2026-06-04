@@ -18,6 +18,42 @@
     "unavailable": "IA indisponible",
     "loading": "IA…"
   },
+  "alerts": {
+    "title": "Anomalies du réseau",
+    "subtitle": "Détection statistique sur les stations fédérales suivies",
+    "loading": "Analyse des anomalies…",
+    "error": "Détection d'anomalies momentanément indisponible.",
+    "countBadge": "{count} en cours",
+    "open": {
+      "title": "Anomalies en cours"
+    },
+    "history": {
+      "title": "Historique récent",
+      "closedTag": "clos"
+    },
+    "nominal": {
+      "title": "Réseau nominal",
+      "body": "Aucune anomalie statistique en cours sur les stations suivies."
+    },
+    "level": {
+      "VIGILANCE": "Vigilance",
+      "ALERT": "Alerte"
+    },
+    "direction": {
+      "ABOVE": "anormalement haut",
+      "BELOW": "anormalement bas"
+    },
+    "parameter": {
+      "DISCHARGE": "Débit",
+      "WATER_LEVEL": "Niveau d'eau",
+      "TEMPERATURE": "Température",
+      "TURBIDITY": "Turbidité"
+    },
+    "z": "z = {value}",
+    "hour": "{hour} h UTC",
+    "method": "Méthode : z-score déseasonnalisé par heure (±2σ).",
+    "disclaimer": "Anomalie statistique (z-score déseasonnalisé par heure, ±2σ), non calibrée par une expertise hydrologique."
+  },
   "hero": {
     "title": "AlpiMonitor",
     "subtitle": "Monitoring hydrologique du Rhône valaisan — données fédérales en temps réel",
@@ -29,7 +65,8 @@
     "legend": {
       "title": "Légende",
       "federal": "Station fédérale (live)",
-      "research": "Zone de recherche CREALP"
+      "research": "Zone de recherche CREALP",
+      "anomaly": "Anomalie statistique en cours"
     },
     "loading": "Chargement de la carte…",
     "error": "Impossible de charger la carte",
@@ -37,7 +74,8 @@
     "popup": {
       "discharge": "Débit : {value} m³/s",
       "noMeasurement": "Aucune mesure récente",
-      "researchNotice": "Réseau CREALP — non exposé publiquement"
+      "researchNotice": "Réseau CREALP — non exposé publiquement",
+      "anomalyNotice": "Anomalie statistique (z-score déseasonnalisé par heure, ±2σ), non calibrée hydrologie experte"
     }
   },
   "drawer": {

@@ -1,5 +1,7 @@
 import type {
   AiStatusResponse,
+  AlertDTO,
+  AlertType,
   StationDTO,
   StationMeasurementsDTO,
   StationNarrativeDTO,
@@ -48,6 +50,7 @@ export type ApiResponse<T> = { success: true; data: T } | { success: false; erro
 type StationsListResponse = { data: StationDTO[] };
 type StationMeasurementsResponse = { data: StationMeasurementsDTO };
 type StationNarrativeResponse = { data: StationNarrativeDTO };
+type AlertsListResponse = { data: AlertDTO[] };
 
 export interface StatusResponse {
   api: { status: 'ok'; uptimeSeconds: number };
@@ -76,6 +79,16 @@ export interface StationNarrativeParams {
   from: Date;
   to: Date;
   lang?: string;
+}
+
+export interface AlertsParams {
+  // Episode lifecycle filter. The API defaults to 'open'; we pass it
+  // explicitly so the two calls the panel makes (open list + recent history)
+  // read unambiguously at the call site.
+  status?: 'open' | 'closed' | 'all';
+  stationId?: string;
+  type?: AlertType;
+  limit?: number;
 }
 
 /**
@@ -135,6 +148,16 @@ function buildMeasurementsPath(stationId: string, params: StationMeasurementsPar
     : `/stations/${stationId}/measurements?${qs}`;
 }
 
+function buildAlertsPath(params: AlertsParams): string {
+  const search = new URLSearchParams();
+  if (params.status !== undefined) search.set('status', params.status);
+  if (params.stationId !== undefined) search.set('stationId', params.stationId);
+  if (params.type !== undefined) search.set('type', params.type);
+  if (params.limit !== undefined) search.set('limit', String(params.limit));
+  const qs = search.toString();
+  return qs === '' ? '/alerts' : `/alerts?${qs}`;
+}
+
 function buildNarrativePath(stationId: string, params: StationNarrativeParams): string {
   const search = new URLSearchParams({
     parameter: params.parameter,
@@ -156,6 +179,7 @@ export const api = {
     request<StationMeasurementsResponse>(buildMeasurementsPath(stationId, params)),
   getStationNarrative: (stationId: string, params: StationNarrativeParams) =>
     request<StationNarrativeResponse>(buildNarrativePath(stationId, params)),
+  getAlerts: (params: AlertsParams = {}) => request<AlertsListResponse>(buildAlertsPath(params)),
   getStatus: () => request<StatusResponse>('/status'),
   getAiStatus: () => request<AiStatusResponse>('/ai/status'),
   getHealth: () => request<HealthResponse>('/health'),

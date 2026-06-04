@@ -12,6 +12,11 @@ import 'leaflet/dist/leaflet.css';
 
 const props = defineProps<{ stations: StationDTO[] }>();
 
+// Anomaly halo colour, resolved at marker-creation time because Leaflet draws
+// circle markers on SVG (no CSS classes for fill/stroke). Amber-600, kept in
+// sync with the OAlertsPanel "count" accent and tailwind defaults.
+const ALERT = '#D97706';
+
 const { t } = useI18n();
 const { selectStation } = useStationSelection();
 
@@ -38,15 +43,35 @@ function renderMarkers(stations: StationDTO[]): void {
       stationToMarkerOptions(station)
     );
     if (station.dataSource === 'LIVE') {
+      // A station with an open statistical anomaly gets a pulsing halo behind
+      // its marker (added first so it renders underneath). It is non-interactive
+      // so clicks still hit the marker and open the drawer.
+      const hasAnomaly = station.activeAlertsCount > 0;
+      if (hasAnomaly) {
+        const halo = L.circleMarker([station.latitude, station.longitude], {
+          radius: 16,
+          weight: 2,
+          color: ALERT,
+          fillColor: ALERT,
+          fillOpacity: 0.15,
+          className: 'o-station-map__alert-halo',
+          interactive: false,
+        });
+        markersLayer.addLayer(halo);
+      }
+
       // LIVE markers open the drawer directly — a popup would be a
       // dead-end preview of data the drawer's chart already shows in
       // full. A lightweight tooltip (hover on desktop, ignored on
       // mobile) keeps the station name visible without that detour.
       const discharge = findLatestDischarge(station);
-      const tooltip =
+      const baseTooltip =
         discharge !== null
           ? `${station.name} — ${t('map.popup.discharge', { value: discharge.toFixed(2) })}`
           : station.name;
+      // Honest framing: the signal is a deseasonalised z-score, not a
+      // calibrated hydrological alert. Spelled out in the tooltip itself.
+      const tooltip = hasAnomaly ? `${baseTooltip} · ${t('map.popup.anomalyNotice')}` : baseTooltip;
       marker.bindTooltip(tooltip, { direction: 'top', offset: [0, -8] });
       marker.on('click', () => {
         selectStation(station.id);
@@ -127,5 +152,29 @@ onScopeDispose(() => {
 
 .o-station-map :deep(.o-station-map__popup-line:first-child) {
   @apply font-semibold text-primary;
+}
+
+/* Anomaly halo: a slow opacity pulse behind a flagged LIVE marker. Leaflet
+   renders the circleMarker as an SVG <path> carrying our className, so we
+   animate it via :deep(). Motion is opt-out for reduced-motion users. */
+.o-station-map :deep(.o-station-map__alert-halo) {
+  animation: o-station-map-pulse 2.4s ease-in-out infinite;
+}
+
+@keyframes o-station-map-pulse {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .o-station-map :deep(.o-station-map__alert-halo) {
+    animation: none;
+    opacity: 0.45;
+  }
 }
 </style>
