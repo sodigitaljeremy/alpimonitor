@@ -28,13 +28,14 @@ Tables du schéma :
 - **`Glacier`**, **`StationGlacier`** — glaciers du bassin (Ferpècle, Mont Miné), jonction station ↔ glacier.
 - **`Withdrawal`** — captages Grande Dixence (Ferpècle 1896 m, Arolla 2009 m).
 - **`User`**, **`ThresholdAudit`** — schéma présent mais non utilisé v1 (admin JWT hors scope).
+- **`Insight`** — *couche IA, extension A ([ADR-012](../09-architectural-decisions/adr-012.md))*. Un enregistrement par narration LLM générée pour un couple `{stationId, parameter, fenêtre, langue}`. Champs : `parameter`, `windowFrom`, `windowTo`, `language` (défaut `fr`), `text`, provenance (`provider`, `model`, `inputHash`), métriques d'appel minimales (`promptTokens?`, `completionTokens?`, `costUsd?`, `latencyMs?`), `generatedAt`. Sert de **cache idempotent** via l'unique `(stationId, parameter, windowFrom, windowTo, language, inputHash)` : mêmes features groundées + version de prompt + langue ⇒ aucun rappel LLM. Calque la discipline de traçabilité d'`IngestionRun`.
 
 ## 5.P.2 Conventions
 
 - **Cuids** comme PK (`id: String @id @default(cuid())`). Pas d'UUID, pas d'auto-increment.
 - **Timestamps systématiques** — `createdAt: DateTime @default(now())` et `updatedAt: DateTime @updatedAt` sur les entités à cycle de vie.
 - **Enums en SCREAMING_SNAKE_CASE** — verbatim DTO front/back, pas de conversion casing. `dataSource: 'LIVE'`, `sourcingStatus: 'CONFIRMED'`, `Parameter: 'DISCHARGE'` cohabitent sans singularité à défendre.
-- **Index composites** — sur `Measurement(sensorId, recordedAt DESC)` pour les requêtes de série temporelle. Sur `IngestionRun(startedAt DESC)` pour `/status`.
+- **Index composites** — sur `Measurement(sensorId, recordedAt DESC)` pour les requêtes de série temporelle. Sur `IngestionRun(startedAt DESC)` pour `/status`. Sur `Insight(stationId, parameter, generatedAt DESC)` pour la dernière narration, + unique composite faisant office de clé de cache.
 - **Pas de soft delete** — `isActive: boolean` sur `Station` si besoin de masquer sans supprimer. Pas de `deletedAt` partout.
 
 ## 5.P.3 Migrations
@@ -58,7 +59,7 @@ Tables du schéma :
 
 `pruneStaleStations(currentOfevCodes)` supprime les `Station` dont `ofevCode` n'est pas dans la liste seed actuelle — cascade `Measurement`, `Alert`, `Threshold`, `Sensor`, `StationGlacier`. C'est l'opération qui aurait pu causer l'incident 2026-04-21 si un seed stale avait été lancé contre prod (non prouvé, cf. post-mortem).
 
-Le seed **ne touche jamais** `Measurement`, `Alert`, `IngestionRun` — tables opérationnelles, exclusivement écrites par le cron.
+Le seed **ne touche jamais** `Measurement`, `Alert`, `IngestionRun`, `Insight` — tables opérationnelles, écrites exclusivement par le cron (ou la couche IA pour `Insight`).
 
 ## 5.P.5 Observabilité côté DB
 

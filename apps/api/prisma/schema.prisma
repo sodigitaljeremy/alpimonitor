@@ -106,6 +106,7 @@ model Station {
   glaciers       StationGlacier[]
   withdrawals    Withdrawal[]
   auditEntries   ThresholdAudit[]
+  insights       Insight[]
   createdAt      DateTime         @default(now())
 }
 
@@ -233,4 +234,36 @@ model IngestionRun {
   durationMs               Int?
 
   @@index([source, startedAt(sort: Desc)])
+}
+
+// One row per LLM-generated narrative for a station/parameter/time-window.
+// AI layer — extension A (ADR-012). Acts as an idempotent cache: the same
+// grounding features + prompt version + language never re-call the LLM.
+// Mirrors IngestionRun's traceability discipline (provenance + metrics).
+// The text is STRICTLY grounded — the model only phrases pre-computed
+// features (delta, min/max, threshold crossing); it predicts nothing.
+model Insight {
+  id               String    @id @default(cuid())
+  stationId        String
+  station          Station   @relation(fields: [stationId], references: [id])
+  parameter        Parameter
+  windowFrom       DateTime
+  windowTo         DateTime
+  language         String    @default("fr") // output language, parameterised (default FR)
+  text             String
+  // Provenance (LLM call identity)
+  provider         String // e.g. "mistral" — direct in A, behind LiteLLM in D
+  model            String // e.g. "mistral-small-latest"
+  inputHash        String // SHA-256 of grounding features + prompt version + language
+  // Minimal LLM-call metrics (cost/latency/tokens) — extension A.
+  // Richer per-call observability (LlmCallRun) lands with the LiteLLM proxy in D.
+  promptTokens     Int?
+  completionTokens Int?
+  costUsd          Float?
+  latencyMs        Int?
+  generatedAt      DateTime  @default(now())
+
+  // Cache key: one narrative per (station, parameter, window, language, inputHash).
+  @@unique([stationId, parameter, windowFrom, windowTo, language, inputHash])
+  @@index([stationId, parameter, generatedAt(sort: Desc)])
 }
