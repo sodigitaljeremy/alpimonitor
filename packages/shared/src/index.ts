@@ -18,3 +18,4 @@ export type {
   StationNarrativeResponse,
 } from './types/narrative.js';
 export type { AiStatusResponse } from './types/ai.js';
+export type { AlertType, AlertLevel, AlertDTO } from './types/alert.js';

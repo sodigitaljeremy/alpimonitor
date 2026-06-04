@@ -1,6 +1,6 @@
 import type { PrismaClient } from '@prisma/client';
 
-import type { Parameter } from '@alpimonitor/shared';
+import type { AlertDTO, AlertLevel, AlertType, Parameter } from '@alpimonitor/shared';
 
 import type { AnomalyVerdict } from '../anomaly/anomaly-detection.js';
 
@@ -11,8 +11,6 @@ import type { AnomalyVerdict } from '../anomaly/anomaly-detection.js';
 // STATISTICAL_ANOMALY type that have existed since the init migration.
 
 const ANOMALY_TYPE = 'STATISTICAL_ANOMALY' as const;
-
-export type AlertLevel = 'INFO' | 'VIGILANCE' | 'ALERT';
 
 // The currently-open episode for a (station, parameter), if any. Carries `level`
 // so the caller can see escalation, and `id` to update/close in place.
@@ -113,4 +111,81 @@ export async function reconcileAnomalyAlert(
   }
 
   return { action: 'none', alertId: null };
+}
+
+// ---------- Read side: GET /api/v1/alerts (B3) ----------
+
+export type AlertStatusFilter = 'open' | 'closed' | 'all';
+
+export interface ListAlertsParams {
+  status: AlertStatusFilter;
+  stationId?: string;
+  type?: AlertType;
+  limit: number;
+}
+
+interface AlertEntity {
+  id: string;
+  stationId: string;
+  type: string;
+  level: string;
+  parameter: string;
+  triggerValue: number;
+  thresholdValue: number | null;
+  openedAt: Date;
+  closedAt: Date | null;
+  metadata: unknown;
+}
+
+function toAlertDto(a: AlertEntity): AlertDTO {
+  return {
+    id: a.id,
+    stationId: a.stationId,
+    type: a.type as AlertType,
+    level: a.level as AlertLevel,
+    parameter: a.parameter as Parameter,
+    triggerValue: a.triggerValue,
+    thresholdValue: a.thresholdValue,
+    openedAt: a.openedAt.toISOString(),
+    closedAt: a.closedAt ? a.closedAt.toISOString() : null,
+    // Prisma types JSON as a broad union; the column only ever holds an object
+    // (the grounded stats) or null in practice.
+    metadata: (a.metadata as Record<string, unknown> | null) ?? null,
+  };
+}
+
+export async function listAlerts(
+  prisma: PrismaClient,
+  params: ListAlertsParams
+): Promise<AlertDTO[]> {
+  const statusWhere =
+    params.status === 'open'
+      ? { closedAt: null }
+      : params.status === 'closed'
+        ? { NOT: { closedAt: null } }
+        : {};
+
+  const rows = await prisma.alert.findMany({
+    where: {
+      ...statusWhere,
+      ...(params.stationId ? { stationId: params.stationId } : {}),
+      ...(params.type ? { type: params.type } : {}),
+    },
+    orderBy: { openedAt: 'desc' },
+    take: params.limit,
+    select: {
+      id: true,
+      stationId: true,
+      type: true,
+      level: true,
+      parameter: true,
+      triggerValue: true,
+      thresholdValue: true,
+      openedAt: true,
+      closedAt: true,
+      metadata: true,
+    },
+  });
+
+  return rows.map(toAlertDto);
 }
