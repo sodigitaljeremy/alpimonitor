@@ -12,6 +12,12 @@
     "loading": "Chargement…",
     "offline": "Flux indisponible"
   },
+  "aiStatus": {
+    "operational": "IA opérationnelle",
+    "degraded": "IA dégradée",
+    "unavailable": "IA indisponible",
+    "loading": "IA…"
+  },
   "hero": {
     "title": "AlpiMonitor",
     "subtitle": "Monitoring hydrologique du Rhône valaisan — données fédérales en temps réel",

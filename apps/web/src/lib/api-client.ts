@@ -1,4 +1,9 @@
-import type { StationDTO, StationMeasurementsDTO, StationNarrativeDTO } from '@alpimonitor/shared';
+import type {
+  AiStatusResponse,
+  StationDTO,
+  StationMeasurementsDTO,
+  StationNarrativeDTO,
+} from '@alpimonitor/shared';
 
 export interface IngestionLastRun {
   source: string;
@@ -152,6 +157,7 @@ export const api = {
   getStationNarrative: (stationId: string, params: StationNarrativeParams) =>
     request<StationNarrativeResponse>(buildNarrativePath(stationId, params)),
   getStatus: () => request<StatusResponse>('/status'),
+  getAiStatus: () => request<AiStatusResponse>('/ai/status'),
   getHealth: () => request<HealthResponse>('/health'),
 };
 
