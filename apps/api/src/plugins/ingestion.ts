@@ -3,6 +3,7 @@ import { resolve } from 'node:path';
 import fp from 'fastify-plugin';
 import cron from 'node-cron';
 
+import { runAnomalyScan } from '../anomaly/anomaly-scan.js';
 import { createFsArchive } from '../ingestion/archive.js';
 import { runLindasIngestion } from '../ingestion/lindas-ingestion.js';
 
@@ -35,8 +36,9 @@ export const ingestionPlugin = fp(
     const archive = createFsArchive(archiveRoot);
 
     const tick = async (): Promise<void> => {
+      let result;
       try {
-        await runLindasIngestion({
+        result = await runLindasIngestion({
           prisma: app.prisma,
           archive,
           logger: app.log,
@@ -45,6 +47,19 @@ export const ingestionPlugin = fp(
         // runLindasIngestion catches its own errors and always resolves —
         // this is defence in depth for truly unexpected throws.
         app.log.error({ err }, 'ingestion tick threw unexpectedly');
+        return;
+      }
+
+      // Anomaly scan (B2) runs AFTER ingestion, fully isolated: it only reads the
+      // freshly-upserted measurements and never blocks the critical path. Skipped
+      // on a FAILURE tick (nothing new to assess) and wrapped so a scan error can
+      // never bubble into ingestion.
+      if (result.status !== 'FAILURE') {
+        try {
+          await runAnomalyScan({ prisma: app.prisma, logger: app.log });
+        } catch (err) {
+          app.log.error({ err }, 'anomaly scan threw unexpectedly');
+        }
       }
     };
 

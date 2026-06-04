@@ -89,6 +89,7 @@ const i18n = createI18n({
         popup: {
           researchNotice: 'Station de recherche.',
           discharge: '{value} m³/s',
+          anomalyNotice: 'Anomalie statistique non calibrée',
         },
       },
     },
@@ -195,6 +196,38 @@ describe('OStationMap', () => {
     const clickHandler = clickCall![1] as () => void;
     clickHandler();
     expect(store.selectedStationId).toBe('live-1');
+  });
+
+  it('adds a pulsing halo and an honest tooltip notice for a LIVE station with an open anomaly', () => {
+    const flagged = { ...station('flagged'), activeAlertsCount: 1 };
+    const calm = station('calm');
+
+    mount(OStationMap, {
+      global: { plugins: [i18n] },
+      props: { stations: [flagged, calm] },
+    });
+
+    // Two markers for the flagged station (halo + marker), one for the calm one.
+    expect(leafletMock.circleMarker).toHaveBeenCalledTimes(3);
+    // The flagged station's halo is non-interactive so clicks still hit its
+    // marker underneath. The mock ignores its args, so read options off the
+    // recorded calls (cast: the mock signature has no typed params).
+    const circleMarkerCalls = leafletMock.circleMarker.mock.calls as unknown as Array<
+      [unknown, { className?: string; interactive?: boolean } | undefined]
+    >;
+    const haloCall = circleMarkerCalls.find(
+      (call) => call[1]?.className === 'o-station-map__alert-halo'
+    );
+    expect(haloCall).toBeDefined();
+    expect(haloCall![1]?.interactive).toBe(false);
+
+    // The flagged marker's tooltip spells out that this is an uncalibrated
+    // statistical signal; the calm one does not. Creation order per station:
+    // main marker first, then (if flagged) the halo — so [0]=flagged marker,
+    // [1]=halo, [2]=calm marker.
+    const [flaggedMarker, , calmMarker] = createdMarkers;
+    expect(flaggedMarker!.bindTooltip.mock.calls[0]?.[0]).toContain('Anomalie statistique');
+    expect(calmMarker!.bindTooltip.mock.calls[0]?.[0]).not.toContain('Anomalie statistique');
   });
 
   it('calls map.remove() and stops observing the container when the component unmounts', () => {

@@ -11,7 +11,8 @@ type Name =
   | 'docs'
   | 'close'
   | 'check'
-  | 'info';
+  | 'info'
+  | 'alert';
 
 withDefaults(
   defineProps<{
@@ -91,6 +92,11 @@ withDefaults(
       <circle cx="12" cy="12" r="9" />
       <path d="M12 11v5" />
       <path d="M12 8h.01" stroke-linecap="round" />
+    </template>
+    <template v-else-if="name === 'alert'">
+      <path d="M10.3 4 2.5 18a2 2 0 0 0 1.7 3h15.6a2 2 0 0 0 1.7-3L13.7 4a2 2 0 0 0-3.4 0z" />
+      <path d="M12 9v4" />
+      <path d="M12 17h.01" stroke-linecap="round" />
     </template>
   </svg>
 </template>

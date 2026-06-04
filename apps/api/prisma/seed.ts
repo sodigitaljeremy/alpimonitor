@@ -51,15 +51,17 @@ type StationSeed = {
 };
 
 // Coordinates for LIVE stations come from LINDAS discovery
-// (apps/api/scripts/discover-ofev-stations.ts, 2026-04-20). Altitudes
-// are BAFU-published station elevations. The Borgne RESEARCH stations
-// keep human-placed coords for the Val d'Hérens villages — close enough
-// for the map narrative, to be refined when the CREALP feed lands.
+// (apps/api/scripts/discover-ofev-stations.ts; the original 4 on 2026-04-20,
+// the 6 Valais Rhône-basin additions on 2026-06-04). Altitudes are
+// BAFU-published station elevations (hydrodaten.admin.ch/en/<code>.html).
+// The Borgne RESEARCH stations keep human-placed coords for the Val d'Hérens
+// villages — close enough for the map narrative, to be refined when the
+// CREALP feed lands.
 //
 // sourcingStatus (see ADR-008) is orthogonal to dataSource:
 //   CONFIRMED    = documented in a verifiable public source.
 //   ILLUSTRATIVE = plausible placement without specific public confirmation.
-// All LIVE stations are CONFIRMED (they stream from the real LINDAS
+// All 10 LIVE stations are CONFIRMED (they stream from the real LINDAS
 // endpoint). Among the CREALP Borgne stations, only Bramois is
 // documented publicly on crealp.ch/monitoring-des-eaux-de-surface;
 // Les Haudères and Evolène are marked ILLUSTRATIVE.
@@ -108,6 +110,83 @@ const STATIONS: StationSeed[] = [
     latitude: 46.35,
     longitude: 6.889,
     altitudeM: 377,
+    flowType: FlowType.NATURAL,
+    operatorName: 'OFEV',
+    dataSource: DataSource.LIVE,
+    sourcingStatus: SourcingStatus.CONFIRMED,
+  },
+  // --- LIVE BAFU Valais Rhône-basin additions (2026-06-04, ADR-012 ext. B) ---
+  // Six on-theme stations: the Rhône main stem from its glacial source
+  // (Gletsch) down through the Goms (Reckingen) and Haut-Valais, plus three
+  // glacial tributaries (Vispa, Saltina, Drance de Bagnes). More real series
+  // for inter-station comparison and statistical anomaly detection.
+  {
+    ofevCode: '2351',
+    name: 'Visp',
+    riverName: 'Vispa',
+    latitude: 46.2744,
+    longitude: 7.8821,
+    altitudeM: 656,
+    flowType: FlowType.NATURAL,
+    operatorName: 'OFEV',
+    dataSource: DataSource.LIVE,
+    sourcingStatus: SourcingStatus.CONFIRMED,
+  },
+  {
+    ofevCode: '2024',
+    name: 'Branson',
+    riverName: 'Rhône',
+    latitude: 46.1264,
+    longitude: 7.0911,
+    altitudeM: 461,
+    flowType: FlowType.NATURAL,
+    operatorName: 'OFEV',
+    dataSource: DataSource.LIVE,
+    sourcingStatus: SourcingStatus.CONFIRMED,
+  },
+  {
+    ofevCode: '2117',
+    name: 'Le Châble',
+    riverName: 'Drance de Bagnes',
+    latitude: 46.0814,
+    longitude: 7.2131,
+    altitudeM: 812,
+    flowType: FlowType.NATURAL,
+    operatorName: 'OFEV',
+    dataSource: DataSource.LIVE,
+    sourcingStatus: SourcingStatus.CONFIRMED,
+  },
+  {
+    ofevCode: '2342',
+    name: 'Brig',
+    riverName: 'Saltina',
+    latitude: 46.3169,
+    longitude: 7.9874,
+    altitudeM: 680,
+    flowType: FlowType.NATURAL,
+    operatorName: 'OFEV',
+    dataSource: DataSource.LIVE,
+    sourcingStatus: SourcingStatus.CONFIRMED,
+  },
+  {
+    ofevCode: '2268',
+    name: 'Gletsch',
+    riverName: 'Rhône',
+    latitude: 46.5617,
+    longitude: 8.3623,
+    altitudeM: 1759,
+    flowType: FlowType.NATURAL,
+    operatorName: 'OFEV',
+    dataSource: DataSource.LIVE,
+    sourcingStatus: SourcingStatus.CONFIRMED,
+  },
+  {
+    ofevCode: '2419',
+    name: 'Reckingen',
+    riverName: 'Rhône',
+    latitude: 46.4694,
+    longitude: 8.2454,
+    altitudeM: 1314,
     flowType: FlowType.NATURAL,
     operatorName: 'OFEV',
     dataSource: DataSource.LIVE,

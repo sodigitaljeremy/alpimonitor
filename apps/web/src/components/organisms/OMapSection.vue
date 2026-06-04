@@ -57,6 +57,10 @@ onMounted(() => {
             />
             <span>{{ t('map.legend.research') }}</span>
           </li>
+          <li class="o-map-section__legend-item">
+            <span class="o-map-section__marker o-map-section__marker--anomaly" aria-hidden="true" />
+            <span>{{ t('map.legend.anomaly') }}</span>
+          </li>
         </ul>
       </aside>
     </div>
@@ -121,5 +125,9 @@ onMounted(() => {
 
 .o-map-section__marker--research {
   @apply border-alpine bg-white;
+}
+
+.o-map-section__marker--anomaly {
+  @apply border-amber-500 bg-amber-500/25;
 }
 </style>
