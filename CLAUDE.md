@@ -148,7 +148,7 @@ alpimonitor/
 | Observabilité | `pino` JSON stdout + `/health` + `/status` | `IngestionRun` persiste chaque tick |
 | CI | GitHub Actions, Node 20, pnpm 10.33.0 | lint + typecheck + test + build sur push main + PR |
 | Déploiement | Coolify (auto-deploy push main) + Traefik + Let's Encrypt | VPS Hetzner `95.216.196.69` |
-| Tests | Vitest + @vue/test-utils + Testing Library | 71 API + 68 web = 139 au 2026-04-22 (après-midi) |
+| Tests | Vitest + @vue/test-utils + Testing Library | 71 API + 102 web = 173 (état courant post-`v1.1.0-refactor`) |
 
 ### Historique des sessions
 
