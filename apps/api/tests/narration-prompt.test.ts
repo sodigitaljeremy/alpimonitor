@@ -27,7 +27,19 @@ function features(
 
 describe('buildNarrationPrompt', () => {
   it('exposes a stable prompt version (cache-key component)', () => {
-    expect(PROMPT_VERSION).toBe('narration-v1');
+    expect(PROMPT_VERSION).toBe('narration-v4');
+  });
+
+  it('does not leak raw ISO timestamps into the fact sheet', () => {
+    const p = buildNarrationPrompt(
+      features([
+        { t: FROM, v: 10 },
+        { t: '2026-06-01T23:50:00.000Z', v: 30 },
+      ]),
+      'fr'
+    );
+    expect(p.user).not.toMatch(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/);
+    expect(p.user).toContain('Période analysée : 24 heures');
   });
 
   it('embeds the requested language code in the system prompt', () => {
