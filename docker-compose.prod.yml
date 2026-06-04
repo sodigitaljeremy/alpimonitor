@@ -47,6 +47,14 @@ services:
       INGESTION_ENABLED: ${INGESTION_ENABLED:-true}
       INGESTION_SCHEDULE: ${INGESTION_SCHEDULE:-*/10 * * * *}
       LINDAS_ARCHIVE_DIR: /app/var/lindas-archive
+      # AI layer (ADR-012). MISTRAL_API_KEY is a Coolify secret — it MUST be
+      # mapped here so the container receives it (Coolify only substitutes
+      # ${VAR} referenced in the compose file). Server-side only, never logged.
+      # Do NOT set LITELLM_BASE_URL: that would switch to the (undeployed) proxy.
+      # Missing key degrades gracefully (narrative → unavailable/config_error),
+      # never crashes the API.
+      MISTRAL_API_KEY: ${MISTRAL_API_KEY}
+      MISTRAL_MODEL: ${MISTRAL_MODEL:-mistral-small-latest}
       # Re-apply the idempotent seed at every boot. Defends against
       # accidental data loss (see entrypoint.sh). Set to false once
       # real operational data must not be overwritten.

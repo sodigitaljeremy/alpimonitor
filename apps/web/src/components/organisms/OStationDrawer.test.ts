@@ -1,5 +1,5 @@
 import type { StationDTO, StationMeasurementsDTO } from '@alpimonitor/shared';
-import { mount, type VueWrapper } from '@vue/test-utils';
+import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { nextTick } from 'vue';
@@ -73,6 +73,35 @@ async function setupOpenDrawer(
   const st = makeStation(stationOverrides);
 
   const fetchMock = vi.fn().mockImplementation((url: string) => {
+    if (url.includes('/narrative')) {
+      return Promise.resolve(
+        okJson({
+          data: {
+            stationId: st.id,
+            parameter: 'DISCHARGE',
+            language: 'fr',
+            window: { from: '2026-04-20T12:00:00.000Z', to: '2026-04-21T12:00:00.000Z' },
+            state: 'generated',
+            reason: null,
+            text: 'Le débit est resté stable.',
+            generatedAt: '2026-04-21T12:00:00.000Z',
+            grounding: {
+              trend: 'STABLE',
+              deltaAbs: 1,
+              deltaPct: 2,
+              status: 'NORMAL',
+              completeness: {
+                expectedPoints: 144,
+                presentPoints: 140,
+                ratio: 0.97,
+                sparse: false,
+                largestGapMinutes: 10,
+              },
+            },
+          },
+        })
+      );
+    }
     if (url.endsWith('/stations')) return Promise.resolve(okJson({ data: [st] }));
     if (url.includes('/measurements')) {
       return Promise.resolve(okJson({ data: measurementsDto(st.id) }));
@@ -137,6 +166,37 @@ describe('OStationDrawer', () => {
     store.clearSelection();
     await nextTick();
     expect(document.body.style.overflow).toBe('');
+  });
+
+  it('shows the AI summary only after clicking "Générer le résumé"', async () => {
+    const { wrapper, store } = await setupOpenDrawer();
+
+    // Seed a displayed series so the narrative button is enabled (the mount-time
+    // selection happens before the drawer's watcher, so measurements aren't auto-loaded here).
+    store.$patch({
+      measurementsByStation: {
+        s1: [
+          {
+            parameter: 'DISCHARGE',
+            unit: 'm³/s',
+            points: [{ t: '2026-04-21T11:00:00.000Z', v: 42 }],
+          },
+        ],
+      },
+    });
+    await nextTick();
+
+    // Before any click, the generated text is not shown and the button is present.
+    expect(wrapper.text()).not.toContain('Le débit est resté stable.');
+    const btn = wrapper.find('.o-station-drawer__narrative-btn');
+    expect(btn.exists()).toBe(true);
+
+    await btn.trigger('click');
+    await flushPromises();
+    await nextTick();
+
+    expect(wrapper.text()).toContain('Le débit est resté stable.');
+    expect(wrapper.text()).toContain('Résumé assisté par IA');
   });
 
   it('hides the hydrodaten link for RESEARCH stations (TBD ofev codes)', async () => {

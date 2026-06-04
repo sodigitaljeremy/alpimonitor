@@ -74,6 +74,12 @@ enum IngestionSourceKind {
   LINDAS_HYDRO
 }
 
+// Outcome of a single LLM call — AI layer observability (ADR-012, extension D).
+enum LlmCallStatus {
+  SUCCESS
+  ERROR
+}
+
 // ---------- Models ----------
 
 model Catchment {
@@ -106,6 +112,7 @@ model Station {
   glaciers       StationGlacier[]
   withdrawals    Withdrawal[]
   auditEntries   ThresholdAudit[]
+  insights       Insight[]
   createdAt      DateTime         @default(now())
 }
 
@@ -225,6 +232,9 @@ model IngestionRun {
   status                   IngestionStatus
   stationsSeenCount        Int                 @default(0)
   measurementsCreatedCount Int                 @default(0)
+  // Rows whose (sensorId, recordedAt) already existed — idempotent no-ops.
+  // Distinguishes "really inserted" from "re-seen" for honest observability.
+  measurementsUnchangedCount Int               @default(0)
   measurementsSkippedCount Int                 @default(0)
   errorMessage             String?
   httpStatus               Int?
@@ -233,4 +243,56 @@ model IngestionRun {
   durationMs               Int?
 
   @@index([source, startedAt(sort: Desc)])
+}
+
+// One row per LLM-generated narrative for a station/parameter/time-window.
+// AI layer — extension A (ADR-012). Acts as an idempotent cache: the same
+// grounding features + prompt version + language never re-call the LLM.
+// Mirrors IngestionRun's traceability discipline (provenance + metrics).
+// The text is STRICTLY grounded — the model only phrases pre-computed
+// features (delta, min/max, threshold crossing); it predicts nothing.
+model Insight {
+  id               String    @id @default(cuid())
+  stationId        String
+  station          Station   @relation(fields: [stationId], references: [id])
+  parameter        Parameter
+  windowFrom       DateTime
+  windowTo         DateTime
+  language         String    @default("fr") // output language, parameterised (default FR)
+  text             String
+  // Provenance (LLM call identity)
+  provider         String // e.g. "mistral" — direct in A, behind LiteLLM in D
+  model            String // e.g. "mistral-small-latest"
+  inputHash        String // SHA-256 of grounding features + prompt version + language
+  // Minimal LLM-call metrics (cost/latency/tokens) — extension A.
+  // Richer per-call observability (LlmCallRun) lands with the LiteLLM proxy in D.
+  promptTokens     Int?
+  completionTokens Int?
+  costUsd          Float?
+  latencyMs        Int?
+  generatedAt      DateTime  @default(now())
+
+  // Cache key: one narrative per (station, parameter, window, language, inputHash).
+  @@unique([stationId, parameter, windowFrom, windowTo, language, inputHash])
+  @@index([stationId, parameter, generatedAt(sort: Desc)])
+}
+
+// One row per LLM call — observability layer (ADR-012, extension D).
+// Written by the ObservingLlmClient decorator around every provider call,
+// success or failure. Mirrors IngestionRun's discipline for the LLM side:
+// provider/model provenance, tokens, cost, latency. Read by GET /ai/status.
+model LlmCallRun {
+  id               String        @id @default(cuid())
+  provider         String // e.g. "mistral" (direct in A) / "litellm" (proxy, D-ready)
+  model            String
+  operation        String // e.g. "narration"
+  status           LlmCallStatus
+  errorKind        String? // the LlmError kind on failure (config/network/http/timeout/parse)
+  promptTokens     Int?
+  completionTokens Int?
+  costUsd          Float?
+  latencyMs        Int
+  createdAt        DateTime      @default(now())
+
+  @@index([createdAt(sort: Desc)])
 }

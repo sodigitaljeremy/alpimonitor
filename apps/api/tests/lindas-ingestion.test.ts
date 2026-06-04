@@ -52,6 +52,7 @@ interface CapturedRun {
   status: string;
   stationsSeenCount: number;
   measurementsCreatedCount: number;
+  measurementsUnchangedCount: number;
   measurementsSkippedCount: number;
   errorMessage?: string | null;
   httpStatus?: number | null;
@@ -62,16 +63,19 @@ interface CapturedRun {
 
 function makePrisma(options: {
   liveCodes: string[];
-  measurementBehavior?: 'ok' | 'throw-on-discharge';
+  // 'throw' simulates a bulk-insert DB failure; `duplicates` simulates rows
+  // skipped by skipDuplicates (already present → unchanged, not created).
+  createManyBehavior?: 'ok' | 'throw';
+  duplicates?: number;
 }): {
   client: IngestionPrismaClient;
   captured: CapturedRun[];
   sensorUpserts: number;
-  measurementUpserts: number;
+  rowsInserted: number;
 } {
   const captured: CapturedRun[] = [];
   let sensorCalls = 0;
-  let measurementCalls = 0;
+  let rowsInserted = 0;
 
   const client: IngestionPrismaClient = {
     station: {
@@ -90,15 +94,14 @@ function makePrisma(options: {
       },
     },
     measurement: {
-      async upsert({ where }) {
-        measurementCalls++;
-        if (
-          options.measurementBehavior === 'throw-on-discharge' &&
-          where.sensorId_recordedAt.sensorId.endsWith('-DISCHARGE')
-        ) {
-          throw new Error('simulated DB failure');
+      async createMany({ data }) {
+        if (options.createManyBehavior === 'throw') {
+          throw new Error('simulated bulk insert failure');
         }
-        return { id: `m-${measurementCalls}` };
+        const dup = options.duplicates ?? 0;
+        const count = Math.max(0, data.length - dup);
+        rowsInserted += count;
+        return { count };
       },
     },
     ingestionRun: {
@@ -115,8 +118,8 @@ function makePrisma(options: {
     get sensorUpserts() {
       return sensorCalls;
     },
-    get measurementUpserts() {
-      return measurementCalls;
+    get rowsInserted() {
+      return rowsInserted;
     },
   };
 }
@@ -143,6 +146,7 @@ describe('runLindasIngestion', () => {
     // 4 stations × (discharge + waterLevel) = 8, minus any row without the
     // optional binding. All 4 priority stations expose both in the fixture.
     expect(result.measurementsCreatedCount).toBe(8);
+    expect(result.measurementsUnchangedCount).toBe(0);
     expect(result.measurementsSkippedCount).toBe(0);
     expect(result.payloadHash).toMatch(/^[a-f0-9]{64}$/);
 
@@ -152,6 +156,7 @@ describe('runLindasIngestion', () => {
       status: 'SUCCESS',
       stationsSeenCount: 4,
       measurementsCreatedCount: 8,
+      measurementsUnchangedCount: 0,
       measurementsSkippedCount: 0,
       httpStatus: 200,
     });
@@ -159,7 +164,30 @@ describe('runLindasIngestion', () => {
 
     expect(archive.writes).toBe(1);
     expect(prisma.sensorUpserts).toBe(8);
-    expect(prisma.measurementUpserts).toBe(8);
+    expect(prisma.rowsInserted).toBe(8);
+  });
+
+  it('counts idempotent re-seen rows as unchanged, not created', async () => {
+    const fetcher: SparqlFetcher = async () => ({
+      body: FIXTURE,
+      bytes: FIXTURE.length,
+      httpStatus: 200,
+    });
+    // All 8 rows already exist → skipDuplicates skips them all.
+    const prisma = makePrisma({ liveCodes: ['2346', '2011', '2630', '2009'], duplicates: 8 });
+    const archive = makeArchive();
+
+    const result = await runLindasIngestion({
+      prisma: prisma.client,
+      fetcher,
+      archive,
+      logger: noopLogger,
+    });
+
+    expect(result.status).toBe('SUCCESS'); // no skips → still SUCCESS
+    expect(result.measurementsCreatedCount).toBe(0);
+    expect(result.measurementsUnchangedCount).toBe(8);
+    expect(result.measurementsSkippedCount).toBe(0);
   });
 
   it('skips stations whose ofevCode is not marked LIVE', async () => {
@@ -183,7 +211,7 @@ describe('runLindasIngestion', () => {
     expect(result.measurementsCreatedCount).toBe(2); // discharge + waterLevel
   });
 
-  it('records PARTIAL when a measurement upsert fails', async () => {
+  it('records PARTIAL when the bulk insert fails', async () => {
     const fetcher: SparqlFetcher = async () => ({
       body: FIXTURE,
       bytes: FIXTURE.length,
@@ -191,7 +219,7 @@ describe('runLindasIngestion', () => {
     });
     const prisma = makePrisma({
       liveCodes: ['2346', '2011', '2630', '2009'],
-      measurementBehavior: 'throw-on-discharge',
+      createManyBehavior: 'throw',
     });
     const archive = makeArchive();
 
@@ -203,8 +231,8 @@ describe('runLindasIngestion', () => {
     });
 
     expect(result.status).toBe('PARTIAL');
-    expect(result.measurementsCreatedCount).toBe(4); // only water-level succeeded
-    expect(result.measurementsSkippedCount).toBe(4); // all discharges failed
+    expect(result.measurementsCreatedCount).toBe(0);
+    expect(result.measurementsSkippedCount).toBe(8); // whole batch skipped
     expect(prisma.captured[0]!.status).toBe('PARTIAL');
   });
 

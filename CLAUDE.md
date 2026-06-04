@@ -99,22 +99,19 @@ alpimonitor/
 
 > **À mettre à jour à la fin de chaque session Claude Code.**
 
-**Date dernière mise à jour** : 2026-04-22 (après-midi, après session Option A transparence sourcing)
+**Date dernière mise à jour** : 2026-06-04 (session couche IA — extensions A « narration » + D « observabilité LLM » livrées sur `feat/ai-layer`)
 **Deadline candidature CREALP** : 2026-04-30
 **Production live** : https://alpimonitor.fr (SPA) + https://api.alpimonitor.fr (API). Auto-deploy sur push `main` via Coolify + GitHub App `sodigitaljeremy`.
 
 ### Next session pickup
 
-> Tu reprends après la **session Option A — transparence du sourcing des stations** (pivot stratégique candidature). Avant de bosser : lis `CLAUDE.md` (cette section + État courant), `docs/STATUS.md`, [ADR-008](docs/architecture/adr/008-station-sourcing-transparency.md), [`docs/context/crealp-stations-sourcing.md`](docs/context/crealp-stations-sourcing.md), et les 3 runbooks `docs/runbooks/incident-2026-04-21.md`, `incident-2026-04-22-traefik-multihoming.md`, `incident-2026-04-22-archive-eacces.md`. Pas besoin de relire toute l'histoire.
+> Tu reprends après la **session couche IA (objectif INTELLITEK)** : audit de réappropriation + démarrage de la couche IA. Avant de bosser : lis `docs/audit/intellitek-audit.md` (carto/gap/mapping/extensions) et [ADR-012](docs/09-architectural-decisions/adr-012.md) (cadrage couche IA, ordre **A→D→B→C**, statut). Tout vit sur la branche **`feat/ai-layer`** (jamais `main`, tags `v1.x` protégés).
 
-**État commits locaux (non pushés au dernier snapshot) :**
+**Extensions A (narration) + D (observabilité LLM) — LIVRÉES** sur `feat/ai-layer` (hashes dans ADR-012). A : `Insight` (cache idempotent), `computeNarrationFeatures` (pur, groundé), client **Mistral** derrière interface `LlmClient`, `GET /stations/:id/narrative` (dégradation gracieuse, grounding), façade + bouton « Générer le résumé ». D : décorateur `ObservingLlmClient` → `LlmCallRun` (coût/latence/tokens), `computeCostUsd` (tarifs publics), `GET /ai/status`, badge IA global (`MStatusBadge`), `Insight.costUsd` renseigné, compteurs d'ingestion honnêtes (`created` vs `unchanged`, D0). **LiteLLM non déployé** (client LiteLLM-ready via `LITELLM_BASE_URL`, point d'extension). Validé en live (narration réelle + `/ai/status` + coût ≈ $0.00006/appel). Clé via `MISTRAL_API_KEY` (`.env` gitignored).
 
-- `8f9ffb5` feat(api): add sourcingStatus field to Station model
-- `fb94f5a` feat(api): expose sourcingStatus on /stations endpoint
-- `b5af019` feat(web): add sourcing status badge on research station cards
-- `<hash>` docs(context): document station sourcing transparency (ADR-008) — rédaction en cours / fin de session Option A
+**Prochaine étape — extension B (détection d'anomalie)** : réactiver le modèle `Alert` (+ enum `STATISTICAL_ANOMALY` déjà présents), hook après upsert d'ingestion (ou job), `GET /api/v1/alerts`, `OAlertsPanel`. Commencer par la version statistique pure (moyenne mobile ± 2σ) testable, LLM en enrichissement optionnel. **Juste avant B/C** : enrichir le seed avec un sous-ensemble Valais curé (~10-20 stations LIVE via `discover-ofev-stations.ts`) pour + de matière (anomalies, comparaisons inter-stations). Puis C (chat/RAG, frontière `QueryPort`/`PrismaQueryAdapter` = « hexagonal » réel). Point d'arrêt défendable = A+D+B.
 
-**Prochaine étape (point 5) :** push groupé + polling Coolify 90s + validation prod (badges visibles sur https://alpimonitor.fr, `curl /api/v1/stations | jq '.data[] | select(.dataSource=="RESEARCH") | {name, sourcingStatus}'` conforme, re-run axe-core pour confirmer pas de régression a11y).
+**Env dev couche IA** : postgres dev up, seed appliqué, **séries réelles 24 h importées de la prod** pour les 4 stations LIVE (narration démontrable sur du vrai). `feat/ai-layer` non poussée / non mergée (prod intacte).
 
 **Sans nouveau tag** : `v1.0.0-crealp` reste sur le commit de fin Bloc 4 (`0eaaad1`). La session Option A enrichit le v1 post-tag sans cérémonie v1.0.1.
 
@@ -148,7 +145,7 @@ alpimonitor/
 | Observabilité | `pino` JSON stdout + `/health` + `/status` | `IngestionRun` persiste chaque tick |
 | CI | GitHub Actions, Node 20, pnpm 10.33.0 | lint + typecheck + test + build sur push main + PR |
 | Déploiement | Coolify (auto-deploy push main) + Traefik + Let's Encrypt | VPS Hetzner `95.216.196.69` |
-| Tests | Vitest + @vue/test-utils + Testing Library | 71 API + 68 web = 139 au 2026-04-22 (après-midi) |
+| Tests | Vitest + @vue/test-utils + Testing Library | 173 sur `main` (71 API + 102 web) ; **243 sur `feat/ai-layer`** (132 API + 111 web) après extensions A + D couche IA |
 
 ### Historique des sessions
 

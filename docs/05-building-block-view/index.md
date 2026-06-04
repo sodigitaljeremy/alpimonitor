@@ -42,7 +42,7 @@ Cinq containers effectifs côté VPS (Traefik + nginx + api + postgres + un 4e n
 | Container | Rôle | Stack | Communication |
 |-----------|------|-------|---------------|
 | **SPA** (web) | UI publique lecture seule | Vue 3 + Vite + TS + Tailwind + Pinia + Leaflet + D3 | REST JSON → API, tiles HTTPS → OSM |
-| **API** | Endpoints REST + cron ingestion | Node 20 + Fastify 5 + Prisma 5 + Zod + Pino + node-cron | SQL → DB, SPARQL HTTP → LINDAS |
+| **API** | Endpoints REST + cron ingestion | Node 20 + Fastify 5 + Prisma 6 + Zod + Pino + node-cron | SQL → DB, SPARQL HTTP → LINDAS |
 | **PostgreSQL** | Persistance stations, mesures, ingestion runs | PostgreSQL 16 (container Docker Coolify) | SQL via Prisma |
 | **Traefik** | TLS, routing, Let's Encrypt auto | Traefik géré par Coolify | — |
 | **nginx** (SPA static) | Serveur statique + 6 headers sécurité | nginx:1.27-alpine | — |

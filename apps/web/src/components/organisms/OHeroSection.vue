@@ -7,12 +7,41 @@ import AIcon from '@/components/atoms/AIcon.vue';
 import MStatusBadge from '@/components/molecules/MStatusBadge.vue';
 import { usePolling } from '@/composables/shared/usePolling';
 import type { BadgeStatus } from '@/lib/status';
+import { useAiStatusStore } from '@/stores/aiStatus';
 import { useStatusStore } from '@/stores/status';
 
 const { t } = useI18n();
 
 const statusStore = useStatusStore();
 const { error, hasLoadedOnce, isHealthy, minutesSinceLastSuccess } = storeToRefs(statusStore);
+
+// AI layer health (ADR-012, D) — a second, global badge next to ingestion.
+const aiStatusStore = useAiStatusStore();
+const {
+  error: aiError,
+  hasLoadedOnce: aiHasLoadedOnce,
+  isDegraded: aiIsDegraded,
+} = storeToRefs(aiStatusStore);
+
+const aiBadgeStatus = computed<BadgeStatus>(() => {
+  if (!aiHasLoadedOnce.value) return 'loading';
+  if (aiError.value) return 'offline';
+  return aiIsDegraded.value ? 'stale' : 'live';
+});
+
+const aiBadgeLabel = computed(() => {
+  switch (aiBadgeStatus.value) {
+    case 'loading':
+      return t('aiStatus.loading');
+    case 'offline':
+      return t('aiStatus.unavailable');
+    case 'stale':
+      return t('aiStatus.degraded');
+    case 'live':
+      return t('aiStatus.operational');
+  }
+  return '';
+});
 
 const badgeStatus = computed<BadgeStatus>(() => {
   if (!hasLoadedOnce.value) return 'loading';
@@ -39,6 +68,7 @@ const badgeLabel = computed(() => {
 const POLL_INTERVAL_MS = 60_000;
 
 usePolling(() => statusStore.fetchStatus(), POLL_INTERVAL_MS, { immediate: true });
+usePolling(() => aiStatusStore.fetchAiStatus(), POLL_INTERVAL_MS, { immediate: true });
 </script>
 
 <template>
@@ -46,6 +76,7 @@ usePolling(() => statusStore.fetchStatus(), POLL_INTERVAL_MS, { immediate: true 
     <div class="o-hero-section__inner">
       <div class="o-hero-section__status">
         <MStatusBadge :status="badgeStatus" :label="badgeLabel" />
+        <MStatusBadge :status="aiBadgeStatus" :label="aiBadgeLabel" />
       </div>
 
       <div class="o-hero-section__content">
@@ -87,7 +118,7 @@ usePolling(() => statusStore.fetchStatus(), POLL_INTERVAL_MS, { immediate: true 
 }
 
 .o-hero-section__status {
-  @apply flex justify-start md:justify-end;
+  @apply flex flex-wrap items-center gap-3 justify-start md:justify-end;
 }
 
 .o-hero-section__content {

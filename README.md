@@ -35,12 +35,12 @@ _Captures générées automatiquement via [`scripts/screenshots.mjs`](./scripts/
 - 11 ADR documentées dont 2 avec drifts d'implémentation assumés
 - Pivot technique majeur en cours de projet : XML OFEV → LINDAS SPARQL ([ADR-007](./docs/09-architectural-decisions/adr-007.md))
 - Production stable depuis 2026-04-20, ingestion 24/7 sans incident
-- Architecture claire : monorepo pnpm, Atomic Design ABEM, hexagonal API, Docker multi-stage
+- Architecture claire : monorepo pnpm, Atomic Design ABEM, backend monolithe en couches fines et pragmatique (YAGNI), Docker multi-stage
 
 ## 🛠 Stack
 
 - **Frontend** : Vue 3 + Vite + TypeScript strict + Tailwind v3.4 (convention ABEM) · Pinia · vue-i18n · Leaflet (tuiles OSM) · D3 (charts vanilla)
-- **Backend** : Fastify 5 + Prisma 5 + PostgreSQL 16 · Zod (validation) · Pino (logs structurés) · cron interne (ingestion LINDAS)
+- **Backend** : Fastify 5 + Prisma 6 + PostgreSQL 16 · Zod (validation) · logs structurés (logger Fastify/pino) · cron interne (ingestion LINDAS)
 - **Infra** : Docker multi-stage · pnpm workspaces · Coolify v4 sur Hetzner · Traefik + Let's Encrypt · GitHub Actions (lint + typecheck + tests + build)
 
 ## Quickstart (dev)

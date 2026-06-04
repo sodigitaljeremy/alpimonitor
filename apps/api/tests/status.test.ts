@@ -87,6 +87,7 @@ describe('GET /api/v1/status', () => {
         completedAt,
         stationsSeenCount: 4,
         measurementsCreatedCount: 8,
+        measurementsUnchangedCount: 2,
         durationMs: 2340,
       },
       { completedAt }
@@ -117,6 +118,7 @@ describe('GET /api/v1/status', () => {
       completedAt: '2026-04-21T10:00:02.340Z',
       stationsSeenCount: 4,
       measurementsCreatedCount: 8,
+      measurementsUnchangedCount: 2,
       durationMs: 2340,
     });
     expect(body.ingestion.lastSuccessAt).toBe('2026-04-21T10:00:02.340Z');

@@ -19,7 +19,20 @@ const {
   retry,
   coordsLabel,
   hydrodatenUrl,
+  narrative,
+  canNarrate,
+  generateNarrative,
 } = useStationDrawer();
+
+// Flatten the narration facade's refs so the template auto-unwraps them.
+const {
+  state: narrativeState,
+  text: narrativeText,
+  reason: narrativeReason,
+  isLoading: narrativeLoading,
+  error: narrativeError,
+  hasRequested: narrativeRequested,
+} = narrative;
 </script>
 
 <template>
@@ -75,6 +88,58 @@ const {
               :window-from="windowFrom"
               :window-to="windowTo"
             />
+          </section>
+
+          <section class="o-station-drawer__narrative">
+            <h4 class="o-station-drawer__chart-title">{{ t('drawer.narrative.title') }}</h4>
+
+            <button
+              v-if="!narrativeRequested"
+              type="button"
+              class="o-station-drawer__narrative-btn"
+              :disabled="!canNarrate"
+              @click="generateNarrative"
+            >
+              <AIcon name="info" :size="14" />
+              <span>{{ t('drawer.narrative.generate') }}</span>
+            </button>
+
+            <p v-else-if="narrativeLoading" class="o-station-drawer__narrative-loading">
+              {{ t('drawer.narrative.loading') }}
+            </p>
+
+            <div v-else class="o-station-drawer__narrative-result" aria-live="polite">
+              <p v-if="narrativeError" class="o-station-drawer__narrative-message" role="status">
+                {{ t('drawer.narrative.error') }}
+              </p>
+              <p
+                v-else-if="narrativeState === 'unavailable'"
+                class="o-station-drawer__narrative-message"
+                role="status"
+              >
+                {{ t(`drawer.narrative.unavailable.${narrativeReason ?? 'llm_error'}`) }}
+              </p>
+              <template v-else>
+                <p
+                  class="o-station-drawer__narrative-text"
+                  :aria-label="t('drawer.narrative.ariaResult')"
+                >
+                  {{ narrativeText }}
+                </p>
+                <p class="o-station-drawer__narrative-ai">{{ t('drawer.narrative.aiLabel') }}</p>
+              </template>
+
+              <button
+                type="button"
+                class="o-station-drawer__narrative-retry"
+                :disabled="!canNarrate"
+                @click="generateNarrative"
+              >
+                {{
+                  narrativeError ? t('drawer.narrative.retry') : t('drawer.narrative.regenerate')
+                }}
+              </button>
+            </div>
           </section>
 
           <footer v-if="hydrodatenUrl" class="o-station-drawer__footer">
@@ -150,6 +215,38 @@ const {
 
 .o-station-drawer__retry {
   @apply rounded-md border border-slate-alpi/30 px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-glacier;
+}
+
+.o-station-drawer__narrative {
+  @apply flex flex-col gap-3 border-t border-slate-alpi/15 px-6 py-6;
+}
+
+.o-station-drawer__narrative-btn {
+  @apply inline-flex w-fit items-center gap-1.5 rounded-md border border-primary/30 px-3 py-2 font-sans text-sm font-medium text-primary transition-colors hover:bg-glacier disabled:cursor-not-allowed disabled:opacity-50;
+}
+
+.o-station-drawer__narrative-loading {
+  @apply text-sm text-slate-alpi;
+}
+
+.o-station-drawer__narrative-result {
+  @apply flex flex-col gap-2;
+}
+
+.o-station-drawer__narrative-message {
+  @apply text-sm text-slate-alpi;
+}
+
+.o-station-drawer__narrative-text {
+  @apply text-sm leading-relaxed text-graphite;
+}
+
+.o-station-drawer__narrative-ai {
+  @apply font-mono text-[11px] uppercase tracking-widest text-slate-alpi;
+}
+
+.o-station-drawer__narrative-retry {
+  @apply w-fit rounded-md border border-slate-alpi/30 px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-glacier disabled:cursor-not-allowed disabled:opacity-50;
 }
 
 .o-station-drawer__footer {

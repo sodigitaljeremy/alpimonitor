@@ -40,11 +40,13 @@ export interface IngestionPrismaClient {
     }): Promise<{ id: string }>;
   };
   measurement: {
-    upsert(args: {
-      where: { sensorId_recordedAt: { sensorId: string; recordedAt: Date } };
-      create: { sensorId: string; recordedAt: Date; value: number };
-      update: Record<string, never>;
-    }): Promise<{ id: string }>;
+    // Bulk insert with skipDuplicates: the `count` returned is the number of
+    // rows ACTUALLY inserted (idempotent re-seen rows are skipped, not counted).
+    // This is what makes measurementsCreatedCount honest.
+    createMany(args: {
+      data: Array<{ sensorId: string; recordedAt: Date; value: number }>;
+      skipDuplicates: boolean;
+    }): Promise<{ count: number }>;
   };
   ingestionRun: {
     create(args: {
@@ -55,6 +57,7 @@ export interface IngestionPrismaClient {
         status: 'SUCCESS' | 'PARTIAL' | 'FAILURE';
         stationsSeenCount: number;
         measurementsCreatedCount: number;
+        measurementsUnchangedCount: number;
         measurementsSkippedCount: number;
         errorMessage?: string | null;
         httpStatus?: number | null;
@@ -78,6 +81,7 @@ export interface IngestionResult {
   status: 'SUCCESS' | 'PARTIAL' | 'FAILURE';
   stationsSeenCount: number;
   measurementsCreatedCount: number;
+  measurementsUnchangedCount: number;
   measurementsSkippedCount: number;
   durationMs: number;
   payloadHash: string | null;
@@ -104,6 +108,7 @@ export async function runLindasIngestion(deps: IngestionDeps): Promise<Ingestion
   let payloadHash: string | null = null;
   let stationsSeenCount = 0;
   let measurementsCreatedCount = 0;
+  let measurementsUnchangedCount = 0;
   let measurementsSkippedCount = 0;
 
   try {
@@ -145,6 +150,10 @@ export async function runLindasIngestion(deps: IngestionDeps): Promise<Ingestion
     const byCode = new Map(liveStations.map((s) => [s.ofevCode, s.id]));
     stationsSeenCount = liveStations.length;
 
+    // Phase 1 — resolve sensors and collect the rows to insert. Sensor upserts
+    // are few (≤ 2 per LIVE station) and idempotent; a failure here skips just
+    // that row.
+    const rows: Array<{ sensorId: string; recordedAt: Date; value: number }> = [];
     for (const parsedStation of allStations) {
       const stationId = byCode.get(parsedStation.ofevCode);
       if (!stationId) continue;
@@ -162,19 +171,30 @@ export async function runLindasIngestion(deps: IngestionDeps): Promise<Ingestion
             update: {},
             select: { id: true },
           });
-          await deps.prisma.measurement.upsert({
-            where: { sensorId_recordedAt: { sensorId: sensor.id, recordedAt } },
-            create: { sensorId: sensor.id, recordedAt, value },
-            update: {},
-          });
-          measurementsCreatedCount++;
+          rows.push({ sensorId: sensor.id, recordedAt, value });
         } catch (err) {
           measurementsSkippedCount++;
           log.warn(
             { err, ofevCode: parsedStation.ofevCode, parameter: spec.parameter },
-            'lindas-ingestion: measurement upsert failed (skipped)'
+            'lindas-ingestion: sensor upsert failed (row skipped)'
           );
         }
+      }
+    }
+
+    // Phase 2 — one bulk insert. `count` is the number truly inserted; the rest
+    // were idempotent re-seen rows (same {sensorId, recordedAt}) → "unchanged".
+    if (rows.length > 0) {
+      try {
+        const { count } = await deps.prisma.measurement.createMany({
+          data: rows,
+          skipDuplicates: true,
+        });
+        measurementsCreatedCount = count;
+        measurementsUnchangedCount = rows.length - count;
+      } catch (err) {
+        measurementsSkippedCount += rows.length;
+        log.warn({ err }, 'lindas-ingestion: measurement bulk insert failed (rows skipped)');
       }
     }
 
@@ -190,6 +210,7 @@ export async function runLindasIngestion(deps: IngestionDeps): Promise<Ingestion
         status,
         stationsSeenCount,
         measurementsCreatedCount,
+        measurementsUnchangedCount,
         measurementsSkippedCount,
         httpStatus,
         payloadBytes,
@@ -203,6 +224,7 @@ export async function runLindasIngestion(deps: IngestionDeps): Promise<Ingestion
       status,
       stationsSeenCount,
       measurementsCreatedCount,
+      measurementsUnchangedCount,
       measurementsSkippedCount,
       durationMs,
       endpoint: LINDAS_ENDPOINT,
@@ -214,6 +236,7 @@ export async function runLindasIngestion(deps: IngestionDeps): Promise<Ingestion
       status,
       stationsSeenCount,
       measurementsCreatedCount,
+      measurementsUnchangedCount,
       measurementsSkippedCount,
       durationMs,
       payloadHash,
@@ -234,6 +257,7 @@ export async function runLindasIngestion(deps: IngestionDeps): Promise<Ingestion
           status: 'FAILURE',
           stationsSeenCount,
           measurementsCreatedCount,
+          measurementsUnchangedCount,
           measurementsSkippedCount,
           errorMessage,
           httpStatus: statusFromErr ?? null,
@@ -252,6 +276,7 @@ export async function runLindasIngestion(deps: IngestionDeps): Promise<Ingestion
       status: 'FAILURE',
       stationsSeenCount,
       measurementsCreatedCount,
+      measurementsUnchangedCount,
       measurementsSkippedCount,
       durationMs,
       payloadHash,

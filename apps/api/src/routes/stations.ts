@@ -1,7 +1,9 @@
 import type { FastifyPluginAsync, FastifyReply } from 'fastify';
 import type { ZodError } from 'zod';
 
+import { stationNarrativeQuerySchema } from '../schemas/narrative.js';
 import { listStationsQuerySchema, stationMeasurementsQuerySchema } from '../schemas/stations.js';
+import { generateStationNarrative } from '../services/narrative-service.js';
 import {
   getStationMeasurements,
   listStations,
@@ -41,6 +43,35 @@ export const stationsRoutes: FastifyPluginAsync = async (app) => {
         to: new Date(parsed.data.to),
         aggregate: parsed.data.aggregate,
       });
+      return { data };
+    } catch (err) {
+      if (err instanceof StationNotFoundError) {
+        return reply.code(404).send({
+          error: { code: 'NOT_FOUND', message: `Station ${req.params.id} not found` },
+        });
+      }
+      throw err;
+    }
+  });
+
+  // AI narration (ADR-012, extension A). Per-parameter, grounded summary.
+  // 400 (Zod) / 404 (no station) are real request errors; a failing AI layer
+  // or thin data returns 200 with state 'unavailable' (graceful degradation).
+  app.get<{ Params: { id: string } }>('/stations/:id/narrative', async (req, reply) => {
+    const parsed = stationNarrativeQuerySchema.safeParse(req.query);
+    if (!parsed.success) return validationError(reply, parsed.error);
+
+    try {
+      const data = await generateStationNarrative(
+        { prisma: app.prisma, llm: app.llm },
+        {
+          stationId: req.params.id,
+          parameter: parsed.data.parameter,
+          from: new Date(parsed.data.from),
+          to: new Date(parsed.data.to),
+          language: parsed.data.lang,
+        }
+      );
       return { data };
     } catch (err) {
       if (err instanceof StationNotFoundError) {
