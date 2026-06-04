@@ -99,21 +99,24 @@ alpimonitor/
 
 > **À mettre à jour à la fin de chaque session Claude Code.**
 
-**Date dernière mise à jour** : 2026-06-04 (session couche IA — extensions A « narration » + D « observabilité LLM » livrées sur `feat/ai-layer`)
+**Date dernière mise à jour** : 2026-06-04 (session couche IA — extensions A + D **LIVRÉES EN PROD**, tag `v1.2.0-ai`)
 **Deadline candidature CREALP** : 2026-04-30
 **Production live** : https://alpimonitor.fr (SPA) + https://api.alpimonitor.fr (API). Auto-deploy sur push `main` via Coolify + GitHub App `sodigitaljeremy`.
 
 ### Next session pickup
 
-> Tu reprends après la **session couche IA (objectif INTELLITEK)** : audit de réappropriation + démarrage de la couche IA. Avant de bosser : lis `docs/audit/intellitek-audit.md` (carto/gap/mapping/extensions) et [ADR-012](docs/09-architectural-decisions/adr-012.md) (cadrage couche IA, ordre **A→D→B→C**, statut). Tout vit sur la branche **`feat/ai-layer`** (jamais `main`, tags `v1.x` protégés).
+> Tu reprends après la **session couche IA (objectif INTELLITEK)** : audit de réappropriation + extensions **A (narration) + D (observabilité LLM) livrées EN PROD**. Avant de bosser : lis `docs/audit/intellitek-audit.md` (carto/gap/mapping/extensions) et [ADR-012](docs/09-architectural-decisions/adr-012.md) (cadrage couche IA, ordre **A→D→B→C**, statut). Couche IA = additive, isolée ; jamais sur `main` directement, tags `v1.x` protégés.
 
-**Extensions A (narration) + D (observabilité LLM) — LIVRÉES** sur `feat/ai-layer` (hashes dans ADR-012). A : `Insight` (cache idempotent), `computeNarrationFeatures` (pur, groundé), client **Mistral** derrière interface `LlmClient`, `GET /stations/:id/narrative` (dégradation gracieuse, grounding), façade + bouton « Générer le résumé ». D : décorateur `ObservingLlmClient` → `LlmCallRun` (coût/latence/tokens), `computeCostUsd` (tarifs publics), `GET /ai/status`, badge IA global (`MStatusBadge`), `Insight.costUsd` renseigné, compteurs d'ingestion honnêtes (`created` vs `unchanged`, D0). **LiteLLM non déployé** (client LiteLLM-ready via `LITELLM_BASE_URL`, point d'extension). Validé en live (narration réelle + `/ai/status` + coût ≈ $0.00006/appel). Clé via `MISTRAL_API_KEY` (`.env` gitignored).
+**A+D — LIVRÉ EN PROD.** Mergé via PR #1 en merge commit **`d0fa304`** sur `main` (14 commits A/D atomiques préservés), tag **`v1.2.0-ai`** posé dessus. `main` à jour, prod stable et vérifiée en ligne (`/health`, `/status` compteurs created/unchanged, `/ai/status`, narration réelle sur station LIVE, badge IA). A : `Insight` (cache idempotent), `computeNarrationFeatures` (pur, groundé), client **Mistral** derrière `LlmClient`, `GET /stations/:id/narrative` (dégradation gracieuse, grounding), façade + bouton « Générer le résumé ». D : décorateur `ObservingLlmClient` → `LlmCallRun` (coût/latence/tokens), `computeCostUsd`, `GET /ai/status`, badge IA global, `Insight.costUsd`, compteurs d'ingestion honnêtes (`created`/`unchanged`, D0). **LiteLLM non déployé** (client LiteLLM-ready via `LITELLM_BASE_URL`, point d'extension). Secret prod `MISTRAL_API_KEY` posé côté Coolify + mappé dans `docker-compose.prod.yml`. Incident deploy mineur (course transitoire au recreate Coolify, 503 ~6 min, réglé par Redeploy) → post-mortem `docs/07-deployment-view/post-mortems/2026-06-04-deploy-recreate-race.md`.
 
-**Prochaine étape — extension B (détection d'anomalie)** : réactiver le modèle `Alert` (+ enum `STATISTICAL_ANOMALY` déjà présents), hook après upsert d'ingestion (ou job), `GET /api/v1/alerts`, `OAlertsPanel`. Commencer par la version statistique pure (moyenne mobile ± 2σ) testable, LLM en enrichissement optionnel. **Juste avant B/C** : enrichir le seed avec un sous-ensemble Valais curé (~10-20 stations LIVE via `discover-ofev-stations.ts`) pour + de matière (anomalies, comparaisons inter-stations). Puis C (chat/RAG, frontière `QueryPort`/`PrismaQueryAdapter` = « hexagonal » réel). Point d'arrêt défendable = A+D+B.
+**Prochaine étape — démarrer sur une branche FRAÎCHE `feat/ai-anomaly` basée sur `main` à jour** (ces docs de clôture y vivent déjà, non mergés — ils voyageront avec la PR de B) :
+1. **Enrichissement seed Valais** : ajouter un sous-ensemble curé (~10-20 stations LIVE Rhône valaisan) via `apps/api/scripts/discover-ofev-stations.ts` → plus de matière réelle pour anomalies + comparaisons inter-stations.
+2. **Extension B (détection d'anomalie)** : réactiver le modèle `Alert` (+ enum `STATISTICAL_ANOMALY` déjà présents), hook après upsert d'ingestion (ou job), `GET /api/v1/alerts`, `OAlertsPanel`. Version statistique pure d'abord (moyenne mobile ± 2σ, testable), LLM en enrichissement optionnel.
+3. Puis **C (chat/RAG)** — frontière `QueryPort`/`PrismaQueryAdapter` = « hexagonal » réel.
 
-**Env dev couche IA** : postgres dev up, seed appliqué, **séries réelles 24 h importées de la prod** pour les 4 stations LIVE (narration démontrable sur du vrai). `feat/ai-layer` non poussée / non mergée (prod intacte).
+**Env dev couche IA** : postgres dev (séries réelles 24 h importées de la prod pour les 4 LIVE) — `docker compose down` possible, l'ingestion réelle reremplit au besoin.
 
-**Sans nouveau tag** : `v1.0.0-crealp` reste sur le commit de fin Bloc 4 (`0eaaad1`). La session Option A enrichit le v1 post-tag sans cérémonie v1.0.1.
+**Tags** : `v1.0.0-crealp`, `v1.1.0-refactor`, `v1.2.0-ai` (← A+D). Le point d'arrêt défendable A+D est atteint **et en prod**.
 
 **État au dernier push (2026-04-22 matin, Bloc 4 clôturé) :** 5 commits journée, tout stable. Lighthouse prod Desktop 96/100/100/100 · Mobile 90/100/96/100. 130 tests verts. Tag `v1.0.0-crealp` posé. 2 orphans Docker à cleanup après 24h (cf. mémoire `project_orphan_cleanups_pending.md`).
 
