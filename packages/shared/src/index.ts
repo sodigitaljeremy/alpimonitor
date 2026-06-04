@@ -17,3 +17,4 @@ export type {
   StationNarrativeDTO,
   StationNarrativeResponse,
 } from './types/narrative.js';
+export type { AiStatusResponse } from './types/ai.js';
