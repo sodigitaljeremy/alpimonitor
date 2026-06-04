@@ -226,6 +226,9 @@ model IngestionRun {
   status                   IngestionStatus
   stationsSeenCount        Int                 @default(0)
   measurementsCreatedCount Int                 @default(0)
+  // Rows whose (sensorId, recordedAt) already existed — idempotent no-ops.
+  // Distinguishes "really inserted" from "re-seen" for honest observability.
+  measurementsUnchangedCount Int               @default(0)
   measurementsSkippedCount Int                 @default(0)
   errorMessage             String?
   httpStatus               Int?

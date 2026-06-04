@@ -12,6 +12,7 @@ const LAST_RUN_SELECT = {
   completedAt: true,
   stationsSeenCount: true,
   measurementsCreatedCount: true,
+  measurementsUnchangedCount: true,
   durationMs: true,
 } as const;
 
@@ -36,6 +37,7 @@ interface StatusResponse {
       completedAt: string | null;
       stationsSeenCount: number;
       measurementsCreatedCount: number;
+      measurementsUnchangedCount: number;
       durationMs: number | null;
     } | null;
     lastSuccessAt: string | null;
@@ -94,6 +96,7 @@ export const statusRoutes: FastifyPluginAsync = async (app) => {
           completedAt: latest.completedAt ? latest.completedAt.toISOString() : null,
           stationsSeenCount: latest.stationsSeenCount,
           measurementsCreatedCount: latest.measurementsCreatedCount,
+          measurementsUnchangedCount: latest.measurementsUnchangedCount,
           durationMs: latest.durationMs,
         };
       }
