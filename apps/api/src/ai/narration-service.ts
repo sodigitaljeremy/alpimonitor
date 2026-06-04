@@ -167,7 +167,7 @@ export async function generateNarration(
     model: deps.llm.model,
     promptTokens: completion.promptTokens,
     completionTokens: completion.completionTokens,
-    costUsd: null, // pricing wired in D (LiteLLM)
+    costUsd: completion.costUsd, // filled by the ObservingLlmClient decorator (D)
     latencyMs: completion.latencyMs,
   });
 

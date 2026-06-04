@@ -58,6 +58,7 @@ function fakeLlm(overrides: Partial<LlmClient> = {}): LlmClient & { calls: numbe
         promptTokens: 100,
         completionTokens: 20,
         latencyMs: 42,
+        costUsd: null,
       };
     },
     ...overrides,

@@ -27,6 +27,9 @@ export interface LlmCompletion {
   promptTokens: number | null;
   completionTokens: number | null;
   latencyMs: number;
+  // Estimated USD cost. The raw provider client leaves this null; the
+  // ObservingLlmClient decorator computes and fills it (extension D).
+  costUsd: number | null;
 }
 
 export interface LlmClient {
@@ -38,6 +41,9 @@ export interface LlmClient {
 export interface MistralClientOptions {
   apiKey?: string; // defaults to process.env.MISTRAL_API_KEY
   model?: string; // defaults to 'mistral-small-latest'
+  // Provider label recorded in observability. 'mistral' for the direct call;
+  // 'litellm' when the same OpenAI-compatible client points at a LiteLLM proxy.
+  provider?: string;
   endpoint?: string;
   timeoutMs?: number;
   temperature?: number;
@@ -82,7 +88,7 @@ export function createMistralClient(opts: MistralClientOptions = {}): LlmClient 
   const clock = opts.now ?? Date.now;
 
   return {
-    provider: 'mistral',
+    provider: opts.provider ?? 'mistral',
     model,
     async complete(req: LlmCompletionRequest): Promise<LlmCompletion> {
       const apiKey = opts.apiKey ?? process.env.MISTRAL_API_KEY;
@@ -149,6 +155,7 @@ export function createMistralClient(opts: MistralClientOptions = {}): LlmClient 
         promptTokens: asIntOrNull(body.usage?.prompt_tokens),
         completionTokens: asIntOrNull(body.usage?.completion_tokens),
         latencyMs,
+        costUsd: null, // filled by the ObservingLlmClient decorator (D)
       };
     },
   };
