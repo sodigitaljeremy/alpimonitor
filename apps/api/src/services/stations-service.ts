@@ -237,3 +237,83 @@ export async function getStationMeasurements(
     series,
   };
 }
+
+// AI layer — extension C1 (ADR-012 D2). Aggregation helper backing the
+// `get_measurement_stats` whitelisted function. Same Prisma.sql-parameterised raw
+// query pattern as getStationMeasurements above; computes the window's aggregate
+// for a single parameter in one round-trip. Returns null when the window holds no
+// data (honest absence rather than a fabricated zero).
+
+export interface StationMeasurementStatsParams {
+  stationId: string;
+  parameter: Parameter;
+  from: Date;
+  to: Date;
+}
+
+export interface StationMeasurementStats {
+  unit: string;
+  first: number;
+  last: number;
+  min: number;
+  max: number;
+  avg: number;
+  sampleSize: number;
+}
+
+interface StatsRow {
+  unit: string | null;
+  first: number | null;
+  last: number | null;
+  min: number | null;
+  max: number | null;
+  avg: number | null;
+  n: number;
+}
+
+export async function getStationMeasurementStats(
+  prisma: PrismaClient,
+  params: StationMeasurementStatsParams
+): Promise<StationMeasurementStats | null> {
+  // first/last are the earliest/latest values in the window (ordered by recordedAt);
+  // min/max/avg/n are plain aggregates. All in one query. stationId, parameter and
+  // both bounds flow through Prisma.sql parameters (no interpolation).
+  const rows = await prisma.$queryRaw<StatsRow[]>`
+    SELECT MIN(s.unit) AS unit,
+           (array_agg(m.value ORDER BY m."recordedAt" ASC))[1] AS first,
+           (array_agg(m.value ORDER BY m."recordedAt" DESC))[1] AS last,
+           MIN(m.value)::float AS min,
+           MAX(m.value)::float AS max,
+           AVG(m.value)::float AS avg,
+           COUNT(*)::int AS n
+    FROM "Measurement" m
+    JOIN "Sensor" s ON m."sensorId" = s.id
+    WHERE s."stationId" = ${params.stationId}
+      AND s.parameter = ${params.parameter}::"Parameter"
+      AND m."recordedAt" >= ${params.from}
+      AND m."recordedAt" < ${params.to}
+  `;
+
+  const row = rows[0];
+  if (
+    !row ||
+    row.n === 0 ||
+    row.first === null ||
+    row.last === null ||
+    row.min === null ||
+    row.max === null ||
+    row.avg === null
+  ) {
+    return null;
+  }
+
+  return {
+    unit: row.unit ?? '',
+    first: row.first,
+    last: row.last,
+    min: row.min,
+    max: row.max,
+    avg: row.avg,
+    sampleSize: row.n,
+  };
+}
