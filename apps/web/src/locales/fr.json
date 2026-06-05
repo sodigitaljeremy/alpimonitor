@@ -54,6 +54,30 @@
     "method": "Méthode : z-score déseasonnalisé par heure (±2σ).",
     "disclaimer": "Anomalie statistique (z-score déseasonnalisé par heure, ±2σ), non calibrée par une expertise hydrologique."
   },
+  "chat": {
+    "title": "Interroger les données",
+    "subtitle": "Posez une question sur les stations, mesures et anomalies du réseau",
+    "intro": "Posez une question en langage naturel ; les réponses s'appuient uniquement sur les données AlpiMonitor.",
+    "placeholder": "Ex. : quel est le débit actuel à Sion ?",
+    "send": "Demander",
+    "sending": "Recherche…",
+    "you": "Vous",
+    "assistant": "Assistant",
+    "usedLabel": "Sources interrogées :",
+    "tool": {
+      "find_stations": "recherche de stations",
+      "get_latest_measurements": "dernières mesures",
+      "get_measurement_stats": "statistiques sur fenêtre",
+      "list_alerts": "anomalies"
+    },
+    "error": {
+      "rate_limited": "Trop de requêtes. Patientez quelques instants avant de réessayer.",
+      "ai_unavailable": "Service IA momentanément indisponible.",
+      "bad_request": "Question invalide. Reformulez votre demande.",
+      "unknown": "Une erreur est survenue. Réessayez."
+    },
+    "disclaimer": "Réponses assistées par IA, fondées sur les données AlpiMonitor."
+  },
   "hero": {
     "title": "AlpiMonitor",
     "subtitle": "Monitoring hydrologique du Rhône valaisan — données fédérales en temps réel",

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import OAlertsPanel from '@/components/organisms/OAlertsPanel.vue';
+import OChatPanel from '@/components/organisms/OChatPanel.vue';
 import OHeroSection from '@/components/organisms/OHeroSection.vue';
 import OKeyMetricsSection from '@/components/organisms/OKeyMetricsSection.vue';
 import OMapSection from '@/components/organisms/OMapSection.vue';
@@ -14,6 +15,7 @@ import TDefaultLayout from '@/components/templates/TDefaultLayout.vue';
     <OHeroSection />
     <OMapSection />
     <OAlertsPanel />
+    <OChatPanel />
     <OKeyMetricsSection />
     <OWhyLindasSection />
     <OResearchZonesSection />
