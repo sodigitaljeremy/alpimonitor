@@ -15,13 +15,16 @@ src/
 │   ├── molecules/     # m- (MSectionHeader, MStatCard, MStationCard, MStatusBadge)
 │   ├── organisms/     # o- (OHeroSection, OHydroChart, OKeyMetricsSection, OMapSection,
 │   │                  #     OResearchZonesSection, OSiteFooter, OStationDrawer,
-│   │                  #     OStationMap, OWhyLindasSection)
+│   │                  #     OStationMap, OWhyLindasSection
+│   │                  #     + couche IA : OAlertsPanel (B), OChatPanel (C))
 │   └── templates/     # t- (TDefaultLayout)
 ├── pages/             # p- (PHomePage)
 ├── composables/
 │   ├── shared/        # useEscapeClose, useScrollLock, usePolling
 │   ├── stations/      # useStationsList, useStationSelection,
 │   │                  # useStationMeasurements, useStationDrawer
+│   ├── alerts/        # useAlertsPanel (couche IA B)
+│   ├── chat/          # useDataChat (couche IA C)
 │   └── useI18nList.ts
 ├── lib/               # logique pure — aucune dépendance Vue/Pinia
 │   ├── api-client.ts  # HTTP centralisé + ApiError discriminé
@@ -90,3 +93,14 @@ Deux singletons :
 - **`useStatusStore`** — snapshot ingestion (`lastSuccessAt`, `minutesSinceLastSuccess`, `isHealthy`, `today.runsCount`, …). Pas de façade — 2 consommateurs prod (`OHeroSection`, `OKeyMetricsSection`), rule-of-three non atteinte. Décision explicitée dans le JSDoc de tête de `stores/status.ts` et tracée dans [ADR-010 §2.2](../09-architectural-decisions/adr-010.md).
 
 Chaque fetch utilise `api.*` de `lib/api-client.ts` — aucun `fetch()` direct dans les stores ni les composables.
+
+## 5.F.6 Couche IA — chat sur données structurées (ADR-012, extension C)
+
+Le chat est livré en **C6** comme une **section dédiée scrollable** (organisme `OChatPanel`), pas un widget flottant (décision D7) — cohérent avec la page single-scroll.
+
+- **`OChatPanel.vue`** — organisme présentationnel : champ de question, fil question/réponse, **trace discrète des tools appelés** (`used[]`, transparence du grounding), disclaimer « réponses assistées par IA » ([ADR-008](../09-architectural-decisions/adr-008.md)), questions d'exemple cliquables pour la découvrabilité (polish chat-ux).
+- **`useDataChat()`** — façade **on-demand**, façon `useStationNarrative` et **non** adossée à un store Pinia : un fil de chat est un état **local au panneau**, pas une donnée partagée cross-composant. Elle possède son état réactif (`messages`, `isLoading`, `error`, `hasMessages`) et délègue l'appel HTTP à `api.ask(question, language?)`.
+- **Backend stateless / single-turn** — chaque `POST /ask` est indépendant (pas d'historique serveur). Le `messages` ref est un **transcript purement client** de la session courante pour le rendu du fil ; il n'est **jamais rejoué** au serveur.
+- **Échecs honnêtes** — `useDataChat` mappe les refus de garde en raisons UI explicites (**429** → trop de requêtes, **503** → IA indisponible, **400** → requête invalide) plutôt que de laisser fuiter des formes HTTP brutes. `api.ask` est ajouté à `lib/api-client.ts` (même `ApiResponse<T>` discriminé que les autres appels).
+
+Testé en isolation (`useDataChat.test.ts`, `OChatPanel.test.ts`) — la façade n'a pas de store à monter ; les appels `api.ask` sont mockés.

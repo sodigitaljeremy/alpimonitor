@@ -1,6 +1,6 @@
 # §6 — Vue d'exécution
 
-Scénarios runtime critiques qui illustrent le comportement des blocs de [§5](../05-building-block-view/index.md) en interaction. Trois scénarios couvrent le cycle complet : ingestion, consultation UI, santé.
+Scénarios runtime critiques qui illustrent le comportement des blocs de [§5](../05-building-block-view/index.md) en interaction. Quatre scénarios couvrent le cycle complet : ingestion, consultation UI, santé, et chat sur données structurées (couche IA).
 
 ## 6.1 Ingestion LINDAS — un tick de cron
 
@@ -114,6 +114,55 @@ Deux contrats importants :
 - **`/health` reste cheap** — un seul `SELECT 1`, aucune lecture de `IngestionRun`. Appelable à la seconde sans charge mesurable.
 - **`/status` porte la vérité ingestion** — si un consumer veut savoir "quand a eu lieu la dernière ingestion réussie ?", c'est `/status` qu'il lit, pas `/health`. Séparation intentionnelle pour permettre un `/health` robuste même si la table `IngestionRun` est corrompue.
 
-## 6.4 Scénarios non détaillés ici
+## 6.4 Chat sur données structurées — `POST /ask`
+
+Scénario de la couche IA C ([ADR-012](../09-architectural-decisions/adr-012.md)). Une question en langage naturel → function-calling Mistral sur le `QueryPort` → réponse **groundée** sur des faits récupérés en base. Tout le flux est gardé (coût + IP), borné (2 rounds), et grounding-strict (hors périmètre → refus).
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Panel as OChatPanel<br/>useDataChat
+    participant Route as routes/ask.ts
+    participant Guard as rate-guard (C4)
+    participant Chat as chat-service (C3b)
+    participant LLM as Mistral<br/>(ObservingLlmClient, D)
+    participant Port as QueryPort<br/>PrismaQueryAdapter (C1)
+    participant DB as PostgreSQL
+
+    User->>Panel: question + Envoyer
+    Panel->>Route: POST /api/v1/ask { question, language? }
+    Route->>Guard: check(ip)
+    alt cost cap atteint OU quota IP dépassé
+        Guard-->>Route: refus (cost_cap | rate_minute | rate_day)
+        Route-->>Panel: 429 RATE_LIMITED (+ Retry-After) — AUCUN appel LLM
+    else autorisé (slot consommé)
+        Guard-->>Route: ok
+        Route->>Route: validation Zod du body (sinon 400)
+        loop round 0..2 (borne DURE — D5)
+            Chat->>LLM: completeWithTools(system grounding-strict, messages, 4 tools, operation='chat')
+            LLM-->>Chat: prose (terminé) OU tool_calls
+            opt tool_calls (rounds 0–1 ; round 2 forcé tool_choice='none')
+                Chat->>Port: dispatch(name, args) parmi les 4 fonctions whitelistées
+                Port->>DB: SELECT (délègue aux services existants)
+                DB-->>Port: faits structurés
+                Port-->>Chat: résultat (réinjecté en message 'tool')
+            end
+        end
+        Chat-->>Route: { answer, used: ToolUse[] }
+        Route-->>Panel: 200 { answer, used, language, generatedAt }
+        Panel->>User: réponse + trace discrète des tools appelés
+    end
+    note over Route,LLM: un LlmError → 503 AI_UNAVAILABLE (gracieux), jamais un 500 brut
+```
+
+Points clés :
+
+- **Garde avant dépense** — le rate-guard court-circuite en **429** *avant* tout parsing ou appel LLM. Le plafond coût ($0,50/j sur le `costUsdToday` total A+C) est un **disjoncteur** lu depuis l'observabilité D, pas un quota par requête.
+- **Boucle bornée à 2 rounds (D5)** — 3 appels LLM maximum ; le dernier est forcé en prose (`tool_choice: 'none'`). Il n'existe pas de 4ᵉ appel.
+- **Grounding STRICT** — le LLM ne narre que des faits récupérés via les 4 fonctions whitelistées (`QueryPort`). Hors périmètre → **« je ne peux pas répondre »**. La trace `used` (tools réellement appelés) remonte au front pour transparence.
+- **Function-calling, pas de SQL ni de vectoriel** — le LLM *choisit* parmi 4 fonctions typées ; il n'écrit jamais de requête, et il n'y a ni embeddings ni vector store. Détail des blocs : [§5.B.8](../05-building-block-view/backend.md#5b8-chat-sur-donnees-structurees-adr-012-extension-c).
+- **Dégradation gracieuse** — un `LlmError` (Mistral down, clé absente) devient un **503** propre côté API ; `useDataChat` le mappe en raison UI honnête (« IA indisponible »), jamais une 5xx brute affichée.
+
+## 6.5 Scénarios non détaillés ici
 
 Les scénarios admin (JWT login, CRUD thresholds) du PRD initial sont hors scope v1. La séquence complète associée (login JWT + `PUT /stations/:id/thresholds` + audit) reste tracée dans le code legacy `docs/architecture/overview.md` §4.3 (hors du site MkDocs, consultable dans le repo) comme référence v2 si le projet continue post-candidature.
