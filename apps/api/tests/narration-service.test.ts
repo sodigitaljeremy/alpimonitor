@@ -61,6 +61,16 @@ function fakeLlm(overrides: Partial<LlmClient> = {}): LlmClient & { calls: numbe
         costUsd: null,
       };
     },
+    async completeWithTools() {
+      return {
+        text: 'unused by narration',
+        toolCalls: null,
+        promptTokens: 0,
+        completionTokens: 0,
+        latencyMs: 0,
+        costUsd: null,
+      };
+    },
     ...overrides,
   };
   return client as LlmClient & { calls: number };

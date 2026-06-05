@@ -5,6 +5,8 @@ import {
   type LlmClient,
   type LlmCompletion,
   type LlmCompletionRequest,
+  type LlmToolCompletion,
+  type LlmToolCompletionRequest,
 } from './llm-client.js';
 import { computeCostUsd } from './llm-pricing.js';
 
@@ -99,6 +101,47 @@ export function createObservingLlmClient(
           latencyMs,
         });
         throw err; // preserve the typed error for the narration service
+      }
+    },
+    async completeWithTools(req: LlmToolCompletionRequest): Promise<LlmToolCompletion> {
+      // The operation is resolvable per call: chat requests carry their own
+      // label so they record as operation:'chat' without disturbing narration.
+      const operation = req.operation ?? opts.operation;
+      const startedAt = clock();
+      try {
+        const completion = await inner.completeWithTools(req);
+        const latencyMs = Math.max(0, Math.round(clock() - startedAt));
+        const costUsd = computeCostUsd(
+          inner.model,
+          completion.promptTokens,
+          completion.completionTokens
+        );
+        await safeRecord({
+          provider: inner.provider,
+          model: inner.model,
+          operation,
+          status: 'SUCCESS',
+          errorKind: null,
+          promptTokens: completion.promptTokens,
+          completionTokens: completion.completionTokens,
+          costUsd,
+          latencyMs,
+        });
+        return { ...completion, costUsd };
+      } catch (err) {
+        const latencyMs = Math.max(0, Math.round(clock() - startedAt));
+        await safeRecord({
+          provider: inner.provider,
+          model: inner.model,
+          operation,
+          status: 'ERROR',
+          errorKind: err instanceof LlmError ? err.kind : null,
+          promptTokens: null,
+          completionTokens: null,
+          costUsd: null,
+          latencyMs,
+        });
+        throw err; // preserve the typed error for the chat service
       }
     },
   };
