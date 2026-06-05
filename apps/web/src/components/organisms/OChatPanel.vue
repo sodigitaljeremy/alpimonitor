@@ -24,6 +24,15 @@ const thread = ref<HTMLElement | null>(null);
 
 const canSend = computed(() => draft.value.trim() !== '' && !isLoading.value);
 
+// Discoverability (feat/chat-ux): in the empty state we offer a few clickable
+// example questions, one per whitelisted function, so the user learns the scope
+// by example. A click sends the question straight away; the chips vanish as soon
+// as a conversation starts (they only render while `hasMessages` is false).
+const exampleKeys = ['flow', 'trend', 'anomalies', 'stations'] as const;
+const examples = computed(() =>
+  exampleKeys.map((key) => ({ key, label: t(`chat.examples.${key}`) }))
+);
+
 // Map the model's tool names to readable labels for the discreet `used` trace.
 function toolLabel(tool: string): string {
   const key = `chat.tool.${tool}`;
@@ -37,6 +46,13 @@ async function submit(): Promise<void> {
   const question = draft.value;
   draft.value = '';
   // Pass the active locale so the answer language tracks the UI (FR today).
+  await ask(question, locale.value);
+}
+
+// A suggested-question chip sends its text directly — no detour through the
+// input. Guarded by isLoading like submit() so a double-click can't fire twice.
+async function askExample(question: string): Promise<void> {
+  if (isLoading.value) return;
   await ask(question, locale.value);
 }
 
@@ -69,7 +85,22 @@ watch(
         aria-live="polite"
         :aria-label="t('chat.title')"
       >
-        <p v-if="!hasMessages" class="o-chat-panel__intro">{{ t('chat.intro') }}</p>
+        <div v-if="!hasMessages" class="o-chat-panel__empty">
+          <p class="o-chat-panel__intro">{{ t('chat.intro') }}</p>
+          <p class="o-chat-panel__examples-label">{{ t('chat.examples.label') }}</p>
+          <ul class="o-chat-panel__examples">
+            <li v-for="example in examples" :key="example.key">
+              <button
+                type="button"
+                class="o-chat-panel__example"
+                :disabled="isLoading"
+                @click="askExample(example.label)"
+              >
+                {{ example.label }}
+              </button>
+            </li>
+          </ul>
+        </div>
 
         <template v-else>
           <div
@@ -152,8 +183,24 @@ watch(
   @apply flex max-h-96 min-h-[12rem] flex-col gap-4 overflow-y-auto rounded-xl border border-slate-alpi/20 bg-white p-5;
 }
 
+.o-chat-panel__empty {
+  @apply m-auto flex max-w-md flex-col items-center gap-3 text-center;
+}
+
 .o-chat-panel__intro {
-  @apply m-auto max-w-md text-center font-sans text-sm text-slate-alpi;
+  @apply max-w-md font-sans text-sm text-slate-alpi;
+}
+
+.o-chat-panel__examples-label {
+  @apply font-mono text-[0.65rem] font-medium uppercase tracking-[0.2em] text-slate-alpi;
+}
+
+.o-chat-panel__examples {
+  @apply flex flex-wrap justify-center gap-2;
+}
+
+.o-chat-panel__example {
+  @apply rounded-full border border-primary/30 bg-white px-3.5 py-1.5 font-sans text-xs text-primary transition-colors hover:border-primary hover:bg-primary/5 disabled:cursor-not-allowed disabled:opacity-50;
 }
 
 .o-chat-panel__turn {

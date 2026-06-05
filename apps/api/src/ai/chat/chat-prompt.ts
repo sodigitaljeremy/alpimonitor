@@ -6,7 +6,7 @@
 // Bump CHAT_PROMPT_VERSION whenever the prompt changes — it is recorded with
 // each chat run so a phrasing shift is traceable (mirrors PROMPT_VERSION in
 // narration-prompt.ts).
-export const CHAT_PROMPT_VERSION = 'chat-v2';
+export const CHAT_PROMPT_VERSION = 'chat-v3';
 
 // The scope is exactly the data the four functions expose: station identities,
 // latest measurements, windowed aggregates, anomaly alerts — for the Borgne /
@@ -33,6 +33,8 @@ export function buildChatSystemPrompt(language = 'fr'): string {
     '- demande une interprétation hydrologique experte (causes, risques de crue, recommandations) qui dépasse les chiffres bruts ;',
     '- concerne un autre bassin, une autre région, ou un sujet sans rapport avec les stations suivies ;',
     '- ne peut pas être satisfaite par les quatre fonctions ci-dessus.',
+    '',
+    "Méta-question (que peux-tu faire ?) — EXCEPTION au refus : si l'utilisateur demande ce qu'il peut te demander, quelles sont tes capacités, ou comment formuler sa question, ce n'est PAS hors périmètre : décris BRIÈVEMENT ton périmètre sans appeler aucune fonction. Présente les types d'informations disponibles (l'identité des stations suivies, leurs dernières mesures, des statistiques sur une période récente, les anomalies détectées) et donne 1 ou 2 exemples de questions (ex. « Quel est le débit actuel à Sion ? », « Y a-t-il des anomalies en cours ? »). C'est la description de ton périmètre, pas une donnée : ne l'invente pas au-delà de ces quatre capacités. Le grounding strict reste absolu pour toute VRAIE question : une demande de météo ou de prévision reste « Je ne peux pas répondre à cette question. »",
     '',
     'Forme de la réponse :',
     '- Réponds TOUJOURS par une PHRASE COMPLÈTE et autonome, compréhensible sans relire la question. Jamais un mot isolé ni un fragment (pas de « Oui. », « Non. », « 42,5 m³/s. »).',
