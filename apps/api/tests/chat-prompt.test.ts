@@ -4,7 +4,7 @@ import { CHAT_PROMPT_VERSION, buildChatSystemPrompt } from '../src/ai/chat/chat-
 
 describe('buildChatSystemPrompt', () => {
   it('exposes the bumped prompt version (traced per chat run)', () => {
-    expect(CHAT_PROMPT_VERSION).toBe('chat-v2');
+    expect(CHAT_PROMPT_VERSION).toBe('chat-v3');
   });
 
   it('embeds the requested language code', () => {
@@ -23,5 +23,13 @@ describe('buildChatSystemPrompt', () => {
     const p = buildChatSystemPrompt();
     expect(p).toContain('UNIQUEMENT à partir des résultats renvoyés par ces fonctions');
     expect(p).toContain('Je ne peux pas répondre à cette question.');
+  });
+
+  it('handles the meta-question as a scope description, not a refusal (chat-v3)', () => {
+    const p = buildChatSystemPrompt();
+    expect(p).toContain('Méta-question');
+    expect(p).toContain('EXCEPTION au refus');
+    // Real out-of-scope questions (e.g. weather) still hit strict grounding.
+    expect(p).toContain('une demande de météo ou de prévision reste');
   });
 });
