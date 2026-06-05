@@ -49,6 +49,26 @@ describe('OChatPanel', () => {
     expect(wrapper.text()).toContain(fr.chat.disclaimer);
   });
 
+  it('offers clickable example questions in the empty state', () => {
+    const wrapper = mountPanel();
+
+    expect(wrapper.findAll('.o-chat-panel__example')).toHaveLength(4);
+    expect(wrapper.find('.o-chat-panel__example').text()).toBe(fr.chat.examples.flow);
+  });
+
+  it('sends an example question directly when its chip is clicked', async () => {
+    const spy = vi.spyOn(api, 'ask').mockResolvedValue({ success: true, data: dto() });
+    const wrapper = mountPanel();
+
+    await wrapper.find('.o-chat-panel__example').trigger('click');
+    await flushPromises();
+
+    expect(spy).toHaveBeenCalledWith(fr.chat.examples.flow, 'fr');
+    // The user bubble shows the chip's question; the chips are now gone.
+    expect(wrapper.find('.o-chat-panel__bubble--user').text()).toContain(fr.chat.examples.flow);
+    expect(wrapper.findAll('.o-chat-panel__example')).toHaveLength(0);
+  });
+
   it('renders the question and answer bubbles after a successful ask', async () => {
     vi.spyOn(api, 'ask').mockResolvedValue({ success: true, data: dto() });
     const wrapper = mountPanel();

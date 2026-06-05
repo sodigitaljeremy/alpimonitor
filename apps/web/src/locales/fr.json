@@ -57,7 +57,14 @@
   "chat": {
     "title": "Interroger les données",
     "subtitle": "Posez une question sur les stations, mesures et anomalies du réseau",
-    "intro": "Posez une question en langage naturel ; les réponses s'appuient uniquement sur les données AlpiMonitor.",
+    "intro": "Posez une question en langage naturel. Je réponds sur les stations suivies, les dernières mesures, les statistiques sur une période récente et les anomalies du Rhône valaisan, à partir des seules données AlpiMonitor.",
+    "examples": {
+      "label": "Pour démarrer, essayez :",
+      "flow": "Quel est le débit actuel à Sion ?",
+      "trend": "Comment a évolué le débit à Visp sur 24 h ?",
+      "anomalies": "Y a-t-il des anomalies en cours ?",
+      "stations": "Quelles stations sont surveillées ?"
+    },
     "placeholder": "Ex. : quel est le débit actuel à Sion ?",
     "send": "Demander",
     "sending": "Recherche…",
