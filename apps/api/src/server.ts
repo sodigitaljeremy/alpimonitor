@@ -7,6 +7,7 @@ import { prismaPlugin } from './plugins/prisma.js';
 import { uptimePlugin } from './plugins/uptime.js';
 import { aiRoutes } from './routes/ai.js';
 import { alertsRoutes } from './routes/alerts.js';
+import { askRoutes } from './routes/ask.js';
 import { healthRoutes } from './routes/health.js';
 import { stationsRoutes } from './routes/stations.js';
 import { statusRoutes } from './routes/status.js';
@@ -32,7 +33,7 @@ export async function buildServer(): Promise<FastifyInstance> {
 
   await server.register(fastifyCors, {
     origin: parseCorsOrigins(process.env.CORS_ORIGINS),
-    methods: ['GET', 'OPTIONS'],
+    methods: ['GET', 'POST', 'OPTIONS'],
     allowedHeaders: ['Content-Type'],
     credentials: false,
   });
@@ -45,6 +46,7 @@ export async function buildServer(): Promise<FastifyInstance> {
   await server.register(statusRoutes, { prefix: '/api/v1' });
   await server.register(aiRoutes, { prefix: '/api/v1' });
   await server.register(alertsRoutes, { prefix: '/api/v1' });
+  await server.register(askRoutes, { prefix: '/api/v1' });
   await server.register(stationsRoutes, { prefix: '/api/v1' });
 
   return server;

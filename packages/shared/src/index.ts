@@ -19,3 +19,4 @@ export type {
 } from './types/narrative.js';
 export type { AiStatusResponse } from './types/ai.js';
 export type { AlertType, AlertLevel, AlertDTO } from './types/alert.js';
+export type { AskToolUse, AskRequestDTO, AskResponseDTO } from './types/ask.js';
