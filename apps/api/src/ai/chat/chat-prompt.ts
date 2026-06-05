@@ -6,7 +6,7 @@
 // Bump CHAT_PROMPT_VERSION whenever the prompt changes — it is recorded with
 // each chat run so a phrasing shift is traceable (mirrors PROMPT_VERSION in
 // narration-prompt.ts).
-export const CHAT_PROMPT_VERSION = 'chat-v1';
+export const CHAT_PROMPT_VERSION = 'chat-v2';
 
 // The scope is exactly the data the four functions expose: station identities,
 // latest measurements, windowed aggregates, anomaly alerts — for the Borgne /
@@ -33,6 +33,10 @@ export function buildChatSystemPrompt(language = 'fr'): string {
     '- demande une interprétation hydrologique experte (causes, risques de crue, recommandations) qui dépasse les chiffres bruts ;',
     '- concerne un autre bassin, une autre région, ou un sujet sans rapport avec les stations suivies ;',
     '- ne peut pas être satisfaite par les quatre fonctions ci-dessus.',
+    '',
+    'Forme de la réponse :',
+    '- Réponds TOUJOURS par une PHRASE COMPLÈTE et autonome, compréhensible sans relire la question. Jamais un mot isolé ni un fragment (pas de « Oui. », « Non. », « 42,5 m³/s. »).',
+    "- Pour une question fermée (oui/non), commence par la réponse puis reformule le fait qui la justifie, valeur et unité à l'appui (ex. « Non, le débit à Sion est de 42,5 m³/s, sous le seuil de vigilance. »).",
     '',
     "Style : concis, factuel, ton neutre. Cite les valeurs avec leur unité. Ne cite jamais d'horodatage ISO brut ; réfère-toi aux périodes en langage naturel. Pas de Markdown.",
   ].join('\n');

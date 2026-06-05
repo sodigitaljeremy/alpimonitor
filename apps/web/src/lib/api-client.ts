@@ -2,6 +2,7 @@ import type {
   AiStatusResponse,
   AlertDTO,
   AlertType,
+  AskResponseDTO,
   StationDTO,
   StationMeasurementsDTO,
   StationNarrativeDTO,
@@ -96,10 +97,10 @@ export interface AlertsParams {
  * method in this file delegates here, so there is one path for failure
  * categorisation and one shape to test against.
  */
-async function request<T>(path: string): Promise<ApiResponse<T>> {
+async function request<T>(path: string, init?: RequestInit): Promise<ApiResponse<T>> {
   let response: Response;
   try {
-    response = await fetch(`${API_BASE_URL}${path}`);
+    response = await fetch(`${API_BASE_URL}${path}`, init);
   } catch (err) {
     return {
       success: false,
@@ -174,6 +175,15 @@ function buildNarrativePath(stationId: string, params: StationNarrativeParams): 
  * directly.
  */
 export const api = {
+  // POST /ask returns the bare AskResponseDTO (no `{ data }` envelope). Any guard
+  // refusal (429 rate/cost, 400 validation, 503 LLM down) surfaces as a typed
+  // `{ kind: 'http', status }` error the chat facade branches on.
+  ask: (question: string, language?: string) =>
+    request<AskResponseDTO>('/ask', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(language === undefined ? { question } : { question, language }),
+    }),
   getStations: () => request<StationsListResponse>('/stations'),
   getStationMeasurements: (stationId: string, params: StationMeasurementsParams) =>
     request<StationMeasurementsResponse>(buildMeasurementsPath(stationId, params)),
