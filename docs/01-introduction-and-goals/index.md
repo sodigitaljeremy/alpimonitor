@@ -2,7 +2,7 @@
 
 ## 1.1 Aperçu
 
-**AlpiMonitor** est un tableau de bord hydrologique du bassin de la Borgne (Valais, Suisse), affluent rive gauche du Rhône drainant le Val d'Hérens. L'application rend visibles en quasi temps-réel les débits et niveaux d'eau de 7 stations — 4 fédérales BAFU ingérées depuis [LINDAS SPARQL](../03-context-and-scope/data-sources.md) et 3 stations du réseau cantonal CREALP sur la Borgne, marquées selon leur sourcing ([ADR-008](../09-architectural-decisions/adr-008.md)).
+**AlpiMonitor** est un tableau de bord hydrologique du **Rhône valaisan et de ses affluents** (Valais, Suisse), avec un **focus recherche sur le bassin de la Borgne** — affluent rive gauche du Rhône drainant le Val d'Hérens. Cette dualité reflète la vérité des données : le réseau **LIVE** suivi en quasi temps-réel porte sur le Rhône et ses affluents (stations fédérales BAFU ingérées depuis [LINDAS SPARQL](../03-context-and-scope/data-sources.md)), tandis que les stations **RESEARCH** de la Borgne matérialisent le focus territorial CREALP / Val d'Hérens, marquées selon leur sourcing ([ADR-008](../09-architectural-decisions/adr-008.md)).
 
 Le projet est un **livrable de démonstration technique** développé depuis le 2026-04-20 pour une candidature au poste de Développeur·se Front-End au [CREALP](https://www.crealp.ch) (Centre de recherche sur l'environnement alpin, Sion). Ce n'est pas un produit commercial et ne concurrence aucune plateforme existante — notamment pas [3DGEOWEB](https://www.3dgeoweb.crealp.ch) qui relève du cœur de produit photogrammétrique CREALP.
 

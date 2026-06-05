@@ -4,7 +4,16 @@ import { CHAT_PROMPT_VERSION, buildChatSystemPrompt } from '../src/ai/chat/chat-
 
 describe('buildChatSystemPrompt', () => {
   it('exposes the bumped prompt version (traced per chat run)', () => {
-    expect(CHAT_PROMPT_VERSION).toBe('chat-v3');
+    expect(CHAT_PROMPT_VERSION).toBe('chat-v4');
+  });
+
+  it('declares the scope as the Rhône valaisan network, aligned on the LIVE data (chat-v4)', () => {
+    const p = buildChatSystemPrompt();
+    expect(p).toContain('Rhône valaisan et de ses affluents');
+    // The geographic refusal no longer excludes the Rhône itself — it gates on
+    // the followed stations / another region / an unrelated subject.
+    expect(p).not.toContain('un autre bassin');
+    expect(p).toContain('sort du réseau de stations suivi');
   });
 
   it('embeds the requested language code', () => {

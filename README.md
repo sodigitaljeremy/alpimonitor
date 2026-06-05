@@ -30,17 +30,18 @@ _Captures générées automatiquement via [`scripts/screenshots.mjs`](./scripts/
 
 ## 📊 Faits marquants
 
-- 13 jours de développement pour une candidature CREALP (deadline 30 avril 2026)
-- 173 tests automatisés verts en CI (71 backend + 102 frontend)
-- 11 ADR documentées dont 2 avec drifts d'implémentation assumés
+- 13 jours de développement pour le livrable de candidature CREALP (deadline 30 avril 2026), prolongé par une **couche IA additive** post-candidature (cf. [🤖 Couche IA](#-couche-ia-extension-post-candidature))
+- 344 tests automatisés verts en CI (208 backend + 136 frontend)
+- 12 ADR documentées dont 2 avec drifts d'implémentation assumés
 - Pivot technique majeur en cours de projet : XML OFEV → LINDAS SPARQL ([ADR-007](./docs/09-architectural-decisions/adr-007.md))
 - Production stable depuis 2026-04-20, ingestion 24/7 sans incident
-- Architecture claire : monorepo pnpm, Atomic Design ABEM, backend monolithe en couches fines et pragmatique (YAGNI), Docker multi-stage
+- Architecture claire : monorepo pnpm, Atomic Design ABEM, backend monolithe en couches fines et pragmatique (YAGNI) — avec une **frontière hexagonale (ports/adapters) localisée à la seule couche chat IA** ([ADR-012](./docs/09-architectural-decisions/adr-012.md)), Docker multi-stage
 
 ## 🛠 Stack
 
 - **Frontend** : Vue 3 + Vite + TypeScript strict + Tailwind v3.4 (convention ABEM) · Pinia · vue-i18n · Leaflet (tuiles OSM) · D3 (charts vanilla)
 - **Backend** : Fastify 5 + Prisma 6 + PostgreSQL 16 · Zod (validation) · logs structurés (logger Fastify/pino) · cron interne (ingestion LINDAS)
+- **Couche IA** (additive, [ADR-012](./docs/09-architectural-decisions/adr-012.md)) : Mistral derrière une interface `LlmClient` isolée · function-calling sur 4 fonctions whitelistées (frontière hexagonale `QueryPort`/`PrismaQueryAdapter`) · observabilité LLM maison (`LlmCallRun`, coût/latence/tokens) · détection d'anomalie statistique (z-score déseasonnalisé, **pas de LLM**)
 - **Infra** : Docker multi-stage · pnpm workspaces · Coolify v4 sur Hetzner · Traefik + Let's Encrypt · GitHub Actions (lint + typecheck + tests + build)
 
 ## Quickstart (dev)
@@ -97,6 +98,17 @@ docker compose -f docker-compose.prod.yml --env-file .env.production up --build
 
 Les domaines `alpimonitor.fr`, `www.alpimonitor.fr` et `api.alpimonitor.fr` sont mappés dans l'UI Coolify vers les services `web` (port 80) et `api` (port 3000).
 
+## 🤖 Couche IA (extension post-candidature)
+
+Une **couche d'intelligence additive et isolée** a été greffée après le livrable de candidature, sans jamais modifier le flux existant (LINDAS SPARQL → Prisma → API → SPA). Quatre briques, toutes en production, toutes documentées dans [ADR-012](./docs/09-architectural-decisions/adr-012.md) :
+
+- **Narration LLM groundée** (A) — `GET /stations/:id/narrative` résume une série temporelle en langage naturel. Le LLM (Mistral, derrière une interface `LlmClient` isolée) ne reçoit que des **features pré-calculées** (delta, min/max, franchissement de seuil) : il *reformule* des faits, il n'invente ni n'extrapole (**grounding strict**). Résultat caché en base (`Insight`, idempotent) et étiqueté « résumé assisté par IA ».
+- **Observabilité LLM maison** (D) — un décorateur `ObservingLlmClient` persiste un `LlmCallRun` par appel (coût estimé, latence, tokens), agrégé sur `GET /ai/status` et exposé par un badge global. Client **LiteLLM-ready** (OpenAI-compatible) mais proxy LiteLLM **non déployé** — point d'extension assumé.
+- **Détection d'anomalie statistique** (B) — `GET /alerts` expose des épisodes d'anomalie détectés par un **z-score déseasonnalisé par heure-de-jour** (`apps/api/src/anomaly/`). C'est de la **statistique pure et déterministe, PAS de l'IA** : aucun appel LLM n'entre dans la décision. Limites (seuils non calibrés par une expertise hydrologique) revendiquées dans l'UI.
+- **Chat sur données structurées** (C) — `POST /api/v1/ask` répond à des questions en langage naturel sur les données. Le LLM fait du **function-calling sur 4 fonctions whitelistées** (`find_stations`, `get_latest_measurements`, `get_measurement_stats`, `list_alerts`) — **pas de text-to-SQL, pas de vector store, pas d'embeddings**. Ces 4 fonctions *sont* le `QueryPort` (frontière hexagonale ports/adapters), implémenté par un `PrismaQueryAdapter` qui délègue aux services existants. Boucle d'outils **bornée à 2 rounds**, **grounding strict** (hors périmètre → « je ne peux pas répondre »), garde unifié maison (plafond coût $0,50/j + rate-limit par IP). Front : organisme `OChatPanel` en section dédiée scrollable + façade `useDataChat`.
+
+> **Pourquoi c'est l'« hexagonal » réel du projet** : le README revendiquait initialement une architecture hexagonale absente du code (le backend est volontairement plat, YAGNI). Plutôt que de saupoudrer le buzzword, la frontière ports/adapters a été introduite **uniquement là où elle a une valeur technique** — la couche chat — où elle permet de tester le raisonnement sans DB (un `QueryPort` en mémoire). Le reste du backend reste plat et assumé.
+
 ## 🧠 Choix techniques notables
 
 Quelques décisions assumées et documentées :
@@ -132,6 +144,10 @@ Les tags git marquent les phases livrées, à lire dans l'ordre :
 
 - [`v1.0.0-crealp`](https://github.com/sodigitaljeremy/alpimonitor/releases/tag/v1.0.0-crealp) — Livrable candidature initial : landing live, ingestion LINDAS temps réel, 7 stations cartographiées, Lighthouse Desktop 96/100/100/100.
 - [`v1.1.0-refactor`](https://github.com/sodigitaljeremy/alpimonitor/releases/tag/v1.1.0-refactor) — Design system + architecture : Storybook exhaustif (46 stories, cf. [ADR-009](./docs/09-architectural-decisions/adr-009.md)) et refactor architecture (façades feature-grouped, `lib/` domain-scoped, règle « aucun consumer prod hors façades » enforced, cf. [ADR-010](./docs/09-architectural-decisions/adr-010.md)).
+- `v1.2.0-ai` — Couche IA, extensions A + D : narration LLM groundée (Mistral derrière `LlmClient` isolée, cache `Insight`) + observabilité LLM maison (`LlmCallRun`, `GET /ai/status`, badge global), cf. [ADR-012](./docs/09-architectural-decisions/adr-012.md).
+- `v1.3.0-anomaly` — Extension B : détection d'anomalie statistique (z-score déseasonnalisé par heure, `GET /alerts`, `OAlertsPanel`) — module séparé, **sans LLM**.
+- `v1.4.0-chat-api` — Extension C (backend) : chat sur données structurées, frontière hexagonale `QueryPort`/`PrismaQueryAdapter`, function-calling sur 4 fonctions whitelistées, endpoint `POST /api/v1/ask` guardé et groundé.
+- `v1.5.0-chat` / `v1.5.1-chat-ux` — Extension C (front) : organisme `OChatPanel` (section dédiée scrollable) + façade `useDataChat`, puis polish UX (questions d'exemple cliquables, prompt affiné, grounding intact).
 
 ## Licence et attributions
 
